@@ -326,7 +326,7 @@ router.post('/player/playback', authenticate, async (req: Request, res: Response
     await execute(
       `INSERT INTO playback_logs (tenant_id, device_id, playlist_id, media_id, log_action, started_at, ended_at, duration_ms, error_message)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [tenantId, deviceId, playlist_id || null, media_id || null, action, started_at || null, ended_at || null, duration_ms || null, error_message || null]
+      [tenantId, deviceId, playlist_id || null, media_id || null, action, started_at ? new Date(started_at) : null, ended_at ? new Date(ended_at) : null, duration_ms || null, error_message || null]
     );
 
     res.json({ status: 'logged' });

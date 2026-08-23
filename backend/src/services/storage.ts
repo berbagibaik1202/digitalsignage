@@ -64,9 +64,16 @@ export async function uploadFile(
 
 // Get presigned URL for download (valid for 7 days)
 export async function getPresignedUrl(storageKey: string, expirySeconds = 7 * 24 * 60 * 60): Promise<string> {
-  const client = getMinioClient();
   const bucket = config.storage.bucket;
 
+  // Bucket is anonymous-read (see minio-init in docker-compose), so build a plain
+  // public URL instead of presigning — presigned URLs would embed the internal
+  // Docker hostname (MINIO_ENDPOINT), which browsers outside the network cannot resolve.
+  if (config.storage.publicUrl) {
+    return `${config.storage.publicUrl.replace(/\/$/, '')}/${bucket}/${storageKey}`;
+  }
+
+  const client = getMinioClient();
   return client.presignedGetObject(bucket, storageKey, expirySeconds);
 }
 

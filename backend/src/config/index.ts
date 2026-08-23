@@ -31,5 +31,7 @@ export const config = {
     secretKey: process.env.MINIO_SECRET_KEY || process.env.STORAGE_SECRET_KEY || 'minioadmin',
     bucket: process.env.MINIO_BUCKET || process.env.STORAGE_BUCKET || 'signage-media',
     useSsl: (process.env.MINIO_USE_SSL || process.env.STORAGE_USE_SSL) === 'true',
+    // Browser-facing base URL for MinIO; internal MINIO_ENDPOINT is a Docker-only hostname
+    publicUrl: process.env.MINIO_PUBLIC_URL || process.env.STORAGE_PUBLIC_URL || '',
   },
 } as const;
