@@ -112,14 +112,34 @@ digitalsignage/
 
 Cara tercepat untuk menjalankan seluruh stack.
 
-#### 1. Clone Repository
+#### 1. Install Docker & Docker Compose
 
 ```bash
-git clone https://github.com/berbagibaik1202/digitalsignage.git
+# Install Docker
+sudo apt update
+sudo apt install -y ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Verify
+sudo docker --version
+sudo docker compose version
+```
+
+#### 2. Clone Repository
+
+```bash
+cd /opt
+sudo git clone https://github.com/berbagibaik1202/digitalsignage.git
+sudo chown -R $USER:$USER /opt/digitalsignage
 cd digitalsignage
 ```
 
-#### 2. Generate Credential Otomatis
+#### 3. Generate Credential Otomatis
 
 ```bash
 # Windows (PowerShell)
@@ -134,7 +154,7 @@ bash scripts/setup-env.sh
 
 Script akan menghasilkan file `.env` dengan credential random yang aman.
 
-#### 3. Jalankan Docker Compose
+#### 4. Jalankan Docker Compose
 
 ```bash
 docker compose up -d
@@ -147,13 +167,13 @@ Ini akan menjalankan:
 - **Backend** — Node.js API + WebSocket + BullMQ worker
 - **Frontend** — React dashboard via Nginx
 
-#### 4. Jalankan Database Migration
+#### 5. Jalankan Database Migration
 
 ```bash
 docker compose exec backend npm run migrate
 ```
 
-#### 5. Selesai!
+#### 6. Selesai!
 
 | Service | URL |
 |---|---|
@@ -164,6 +184,40 @@ docker compose exec backend npm run migrate
 **Login Default:**
 - Email: `admin@demo.com`
 - Password: `password123`
+
+---
+
+### Update / Deploy Ulang
+
+Jika ada perubahan kode, jalankan:
+
+```bash
+cd /opt/digitalsignage
+git pull origin main
+docker compose down
+docker compose build --no-cache backend
+docker compose up -d
+docker compose exec backend npm run migrate
+```
+
+### Cek Status
+
+```bash
+# Lihat semua container
+docker compose ps
+
+# Lihat log backend
+docker compose logs -f backend
+
+# Lihat log frontend
+docker compose logs -f frontend
+
+# Restart semua service
+docker compose restart
+
+# Stop semua
+docker compose down
+```
 
 ---
 
