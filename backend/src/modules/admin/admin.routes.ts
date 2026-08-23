@@ -78,7 +78,8 @@ router.get('/admin/tenants', authenticate, requireRole('super_admin'), async (re
     }
 
     const result = await paginatedQuery<TenantRow>(
-      `SELECT t.*,
+      `SELECT t.id, t.name, t.slug, t.contact_email, t.max_devices, t.max_storage_mb,
+        t.registration_token, t.status, t.created_at, t.updated_at,
         (SELECT COUNT(*) FROM users u WHERE u.tenant_id = t.id) AS user_count,
         (SELECT COUNT(*) FROM devices d WHERE d.tenant_id = t.id) AS device_count,
         (SELECT COUNT(*) FROM devices d WHERE d.tenant_id = t.id AND d.status = 'ONLINE') AS online_device_count

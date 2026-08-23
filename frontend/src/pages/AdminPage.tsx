@@ -57,11 +57,14 @@ export default function AdminPage() {
         if (search) params.set('search', search);
         if (statusFilter) params.set('status', statusFilter);
         const res = await api.get(`/admin/tenants?${params}`);
-        setTenants(res.data.data || []);
-        setTotal(res.data.total);
+        console.log('Tenants API response:', res.data);
+        setTenants(res.data?.data || []);
+        setTotal(res.data?.total || 0);
       }
-    } catch (err) { console.error('Load error:', err); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      console.error('Load error:', err);
+      alert('Gagal memuat data: ' + (err.response?.data?.error || err.message));
+    } finally { setLoading(false); }
   }
 
   async function handleSaveTenant() {
@@ -72,15 +75,18 @@ export default function AdminPage() {
       };
       if (editingTenant) {
         await api.put(`/admin/tenants/${editingTenant.id}`, data);
+        alert('Tenant berhasil diupdate!');
       } else {
-        await api.post('/admin/tenants', data);
+        const res = await api.post('/admin/tenants', data);
+        const token = res.data.registration_token;
+        alert(`Tenant berhasil dibuat!\n\nRegistration Token:\n${token}\n\nSimpan token ini untuk registrasi device.`);
       }
       setShowModal(false);
       setEditingTenant(null);
       resetForm();
       loadData();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to save tenant');
+      alert('Error: ' + (err.response?.data?.error || 'Gagal menyimpan tenant'));
     }
   }
 
@@ -88,8 +94,9 @@ export default function AdminPage() {
     if (!confirm('Deactivate this tenant?')) return;
     try {
       await api.delete(`/admin/tenants/${id}`);
+      alert('Tenant berhasil di-deactivate!');
       loadData();
-    } catch (err: any) { alert(err.response?.data?.error || 'Failed'); }
+    } catch (err: any) { alert('Error: ' + (err.response?.data?.error || 'Gagal menghapus tenant')); }
   }
 
   function openEditTenant(tenant: Tenant) {
