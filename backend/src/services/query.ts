@@ -47,16 +47,18 @@ export async function paginatedQuery<T extends RowDataPacket = RowDataPacket>(
 ): Promise<PaginatedResult<T>> {
   const offset = (Math.max(1, page) - 1) * limit;
 
-  const [countResult] = await db.execute(countSql, params);
+  // Use db.query for count (avoids prepared statement issues)
+  const [countResult] = await db.query(countSql, params);
   const total = (countResult as any)[0]?.total ?? 0;
 
-  const data = await query<T[]>(
-    `${baseSql} LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
+  // Use db.query for data query (LIMIT/OFFSET work better with query vs execute)
+  const [rows] = await db.query(
+    `${baseSql} LIMIT ${Number(limit)} OFFSET ${Number(offset)}`,
+    params
   );
 
   return {
-    data,
+    data: rows as T[],
     total,
     page,
     limit,
