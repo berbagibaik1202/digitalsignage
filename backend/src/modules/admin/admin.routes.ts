@@ -21,27 +21,17 @@ interface TenantRow extends RowDataPacket {
 }
 
 // ─── GET /api/v1/admin/overview ─────────────────────────────────
-// Global stats for super admin
 router.get('/admin/overview', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
   try {
     const tenantCount = await queryOne<RowDataPacket>('SELECT COUNT(*) AS total FROM tenants');
     const userCount = await queryOne<RowDataPacket>('SELECT COUNT(*) AS total FROM users');
-    const deviceCount = await queryOne<RowDataPacket>('SELECT COUNT(*) AS total, COUNT(CASE WHEN status = \'ONLINE\' THEN 1 END) AS online FROM devices');
+    const deviceCount = await queryOne<RowDataPacket>(`SELECT COUNT(*) AS total, COUNT(CASE WHEN status = 'ONLINE' THEN 1 END) AS online FROM devices`);
     const mediaCount = await queryOne<RowDataPacket>('SELECT COUNT(*) AS total, COALESCE(SUM(file_size), 0) AS total_size FROM media');
-    const subCount = await queryOne<RowDataPacket>(
-      'SELECT COUNT(*) AS total, COUNT(CASE WHEN status = \'ACTIVE\' THEN 1 END) AS active FROM subscriptions'
-    );
+    const subCount = await queryOne<RowDataPacket>(`SELECT COUNT(*) AS total, COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) AS active FROM subscriptions`);
 
-    // Tenants by status
-    const tenantsByStatus = await query<RowDataPacket[]>(
-      'SELECT status, COUNT(*) AS count FROM tenants GROUP BY status'
-    );
-
-    // Recent registrations (last 7 days)
+    const tenantsByStatus = await query<RowDataPacket[]>('SELECT status, COUNT(*) AS count FROM tenants GROUP BY status');
     const recentTenants = await query<RowDataPacket[]>(
-      `SELECT DATE(created_at) AS date, COUNT(*) AS count
-       FROM tenants WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-       GROUP BY DATE(created_at) ORDER BY date`
+      `SELECT DATE(created_at) AS date, COUNT(*) AS count FROM tenants WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY DATE(created_at) ORDER BY date`
     );
 
     res.json({
@@ -77,9 +67,10 @@ router.get('/admin/tenants', authenticate, requireRole('super_admin'), async (re
       params.push(status);
     }
 
+    // Simple query first - avoid issues with missing columns
     const result = await paginatedQuery<TenantRow>(
       `SELECT t.id, t.name, t.slug, t.contact_email, t.max_devices, t.max_storage_mb,
-        t.registration_token, t.status, t.created_at, t.updated_at,
+        t.status, t.created_at, t.updated_at,
         (SELECT COUNT(*) FROM users u WHERE u.tenant_id = t.id) AS user_count,
         (SELECT COUNT(*) FROM devices d WHERE d.tenant_id = t.id) AS device_count,
         (SELECT COUNT(*) FROM devices d WHERE d.tenant_id = t.id AND d.status = 'ONLINE') AS online_device_count
@@ -91,6 +82,22 @@ router.get('/admin/tenants', authenticate, requireRole('super_admin'), async (re
       page,
       limit
     );
+
+    // Try to add registration_token if column exists
+    try {
+      const tokens = await query<RowDataPacket[]>(
+        'SELECT id, registration_token FROM tenants WHERE registration_token IS NOT NULL'
+      );
+      const tokenMap = new Map(tokens.map((t: any) => [t.id, t.registration_token]));
+      if (result.data) {
+        result.data = result.data.map((t: any) => ({
+          ...t,
+          registration_token: tokenMap.get(t.id) || null,
+        }));
+      }
+    } catch {
+      // registration_token column might not exist yet - ignore
+    }
 
     res.json(result);
   } catch (err) {
@@ -122,7 +129,7 @@ router.get('/admin/tenants/:id', authenticate, requireRole('super_admin'), async
     );
 
     const users = await query<RowDataPacket[]>(
-      'SELECT id, email, full_name, role, is_active, created_at FROM users WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 10',
+      'SELECT id, email, full_name, role, status, created_at FROM users WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 10',
       [id]
     );
 
@@ -143,6 +150,12 @@ router.post('/admin/tenants', authenticate, requireRole('super_admin'), async (r
       return;
     }
 
+    // Validate slug format
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+      res.status(400).json({ error: 'slug must be lowercase alphanumeric with hyphens' });
+      return;
+    }
+
     const existing = await queryOne('SELECT id FROM tenants WHERE slug = ?', [slug]);
     if (existing) {
       res.status(409).json({ error: 'Slug already exists' });
@@ -152,11 +165,26 @@ router.post('/admin/tenants', authenticate, requireRole('super_admin'), async (r
     // Generate registration token
     const registrationToken = crypto.randomBytes(32).toString('hex');
 
-    const result = await execute(
-      `INSERT INTO tenants (name, slug, contact_email, max_devices, max_storage_mb, registration_token)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [name, slug, contact_email || null, max_devices || 5, max_storage_mb || 1024, registrationToken]
-    );
+    // Try to insert with registration_token column
+    let result;
+    try {
+      result = await execute(
+        `INSERT INTO tenants (name, slug, contact_email, max_devices, max_storage_mb, registration_token)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [name, slug, contact_email || null, max_devices || 5, max_storage_mb || 1024, registrationToken]
+      );
+    } catch (insertErr: any) {
+      // If registration_token column doesn't exist, insert without it
+      if (insertErr.message?.includes('registration_token')) {
+        result = await execute(
+          `INSERT INTO tenants (name, slug, contact_email, max_devices, max_storage_mb)
+           VALUES (?, ?, ?, ?, ?)`,
+          [name, slug, contact_email || null, max_devices || 5, max_storage_mb || 1024]
+        );
+      } else {
+        throw insertErr;
+      }
+    }
 
     const tenant = await queryOne<TenantRow>('SELECT * FROM tenants WHERE id = ?', [result.insertId]);
     res.status(201).json({ tenant, registration_token: registrationToken });
@@ -209,8 +237,7 @@ router.delete('/admin/tenants/:id', authenticate, requireRole('super_admin'), as
       return;
     }
 
-    // Soft delete — deactivate
-    await execute('UPDATE tenants SET status = \'INACTIVE\' WHERE id = ?', [id]);
+    await execute("UPDATE tenants SET status = 'INACTIVE' WHERE id = ?", [id]);
     res.json({ message: 'Tenant deactivated' });
   } catch (err) {
     console.error('Admin delete tenant error:', err);
@@ -235,42 +262,6 @@ router.post('/admin/tenants/:id/regenerate-token', authenticate, requireRole('su
     res.json({ registration_token: newToken });
   } catch (err) {
     console.error('Admin regenerate token error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ─── GET /api/v1/admin/commands ─────────────────────────────────
-// All commands across all tenants
-router.get('/admin/commands', authenticate, requireRole('super_admin'), async (req: Request, res: Response) => {
-  try {
-    const page = Number(req.query.page) || 1;
-    const limit = Math.min(Number(req.query.limit) || 50, 200);
-    const status = (req.query.status as string) || '';
-
-    let whereClause = 'WHERE 1=1';
-    const params: unknown[] = [];
-
-    if (status) {
-      whereClause += ' AND dc.status = ?';
-      params.push(status);
-    }
-
-    const result = await paginatedQuery<RowDataPacket>(
-      `SELECT dc.*, d.name AS device_name, d.device_uuid, t.name AS tenant_name
-       FROM device_commands dc
-       LEFT JOIN devices d ON dc.device_id = d.id
-       LEFT JOIN tenants t ON dc.tenant_id = t.id
-       ${whereClause}
-       ORDER BY dc.created_at DESC`,
-      `SELECT COUNT(*) AS total FROM device_commands dc ${whereClause}`,
-      params,
-      page,
-      limit
-    );
-
-    res.json(result);
-  } catch (err) {
-    console.error('Admin commands error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
