@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Tv, Search, Wifi, WifiOff, Trash2, RefreshCw, MonitorPlay } from 'lucide-react';
+import { Tv, Search, Wifi, WifiOff, Trash2, RefreshCw, MonitorPlay, Key, Copy, Check } from 'lucide-react';
 import api from '../lib/api';
 
 interface Device {
@@ -23,6 +23,10 @@ export default function DevicesPage() {
   const [total, setTotal] = useState(0);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [showCommandModal, setShowCommandModal] = useState(false);
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [registrationToken, setRegistrationToken] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [loadingToken, setLoadingToken] = useState(false);
 
   useEffect(() => {
     loadDevices();
@@ -37,13 +41,49 @@ export default function DevicesPage() {
       if (statusFilter) params.set('status', statusFilter);
 
       const res = await api.get(`/devices?${params}`);
-      setDevices(res.data.data);
-      setTotal(res.data.total);
+      setDevices(res.data.data || []);
+      setTotal(res.data.total || 0);
     } catch (err) {
       console.error('Failed to load devices:', err);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadRegistrationToken() {
+    setLoadingToken(true);
+    try {
+      // Get current user's tenant
+      const userRes = await api.get('/auth/me');
+      const tenantId = userRes.data.user?.tenantId;
+
+      if (!tenantId) {
+        alert('Tenant tidak ditemukan');
+        return;
+      }
+
+      // Get tenant details including registration token
+      const tenantRes = await api.get(`/tenants/${tenantId}`);
+      const token = tenantRes.data.tenant?.registration_token;
+
+      if (token) {
+        setRegistrationToken(token);
+        setShowTokenModal(true);
+      } else {
+        alert('Registration token belum tersedia. Silakan hubungi admin.');
+      }
+    } catch (err: any) {
+      console.error('Failed to load token:', err);
+      alert('Gagal memuat registration token');
+    } finally {
+      setLoadingToken(false);
+    }
+  }
+
+  function copyToken() {
+    navigator.clipboard.writeText(registrationToken);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   async function sendCommand(deviceId: number, commandType: string) {
@@ -77,6 +117,28 @@ export default function DevicesPage() {
           <h1 className="text-2xl font-bold text-white">Devices</h1>
           <p className="text-gray-400 mt-1">{total} device(s) registered</p>
         </div>
+        <div className="flex gap-2">
+          <button
+            onClick={loadRegistrationToken}
+            disabled={loadingToken}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 rounded-lg text-white text-sm font-medium"
+          >
+            <Key className="w-4 h-4" />
+            {loadingToken ? 'Loading...' : 'Registration Token'}
+          </button>
+        </div>
+      </div>
+
+      {/* Instructions Card */}
+      <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+        <h3 className="text-blue-400 font-medium mb-2">📱 Cara Menambahkan Device Baru</h3>
+        <ol className="text-sm text-gray-300 space-y-1 list-decimal list-inside">
+          <li>Klik tombol <strong>"Registration Token"</strong> di atas</li>
+          <li>Copy token yang muncul</li>
+          <li>Buka Electron Player di TV/Monitor</li>
+          <li>Masukkan <strong>Server URL</strong> dan <strong>Registration Token</strong></li>
+          <li>Device akan otomatis terdaftar</li>
+        </ol>
       </div>
 
       {/* Filters */}
@@ -132,7 +194,8 @@ export default function DevicesPage() {
               <tr>
                 <td colSpan={7} className="text-center py-12 text-gray-500">
                   <Tv className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>No devices found</p>
+                  <p>Belum ada device terdaftar</p>
+                  <p className="text-sm mt-2">Gunakan Registration Token untuk menambah device baru</p>
                 </td>
               </tr>
             ) : (
@@ -200,6 +263,55 @@ export default function DevicesPage() {
           >
             Next
           </button>
+        </div>
+      )}
+
+      {/* Registration Token Modal */}
+      {showTokenModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-lg">
+            <h3 className="text-lg font-semibold text-white mb-4">🔑 Registration Token</h3>
+
+            <div className="bg-gray-800 rounded-lg p-4 mb-4">
+              <p className="text-xs text-gray-400 mb-2">Token ini digunakan untuk mendaftarkan device baru:</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-green-400 text-sm font-mono break-all">{registrationToken}</code>
+                <button
+                  onClick={copyToken}
+                  className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white shrink-0"
+                >
+                  {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <h4 className="text-white font-medium">Cara Pakai:</h4>
+              <div className="bg-gray-800 rounded-lg p-3 space-y-2">
+                <p className="text-gray-300">1. Buka Electron Player di TV/Monitor</p>
+                <p className="text-gray-300">2. Masukkan Server URL:</p>
+                <code className="block bg-gray-900 px-3 py-1 rounded text-blue-400 text-xs">
+                  {window.location.origin}
+                </code>
+                <p className="text-gray-300">3. Masukkan Registration Token di atas</p>
+                <p className="text-gray-300">4. Klik "Hubungkan"</p>
+              </div>
+
+              <div className="bg-gray-800 rounded-lg p-3">
+                <p className="text-gray-300">Atau akses langsung di browser:</p>
+                <code className="block bg-gray-900 px-3 py-1 rounded text-blue-400 text-xs mt-1">
+                  {window.location.origin}/player?token={registrationToken}
+                </code>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowTokenModal(false)}
+              className="w-full mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300"
+            >
+              Tutup
+            </button>
+          </div>
         </div>
       )}
 
