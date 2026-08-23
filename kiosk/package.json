@@ -1,0 +1,33 @@
+{
+  "name": "digitalsignage-kiosk",
+  "version": "1.0.0",
+  "description": "Digital Signage Kiosk Browser",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:mac": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "^35.7.2",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.digitalsignage.kiosk",
+    "productName": "Digital Signage Kiosk",
+    "directories": {
+      "output": "release"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Utility"
+    },
+    "win": {
+      "target": ["nsis"]
+    },
+    "mac": {
+      "target": ["dmg"]
+    }
+  }
+}
