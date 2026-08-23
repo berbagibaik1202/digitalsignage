@@ -55,10 +55,10 @@ export default function DevicesPage() {
     try {
       // Get current user's tenant
       const userRes = await api.get('/auth/me');
-      const tenantId = userRes.data.user?.tenantId;
+      const tenantId = userRes.data.user?.tenant_id || userRes.data.user?.tenantId;
 
       if (!tenantId) {
-        alert('Tenant tidak ditemukan');
+        alert('Tenant tidak ditemukan. Pastikan user memiliki tenant.');
         return;
       }
 
@@ -70,11 +70,15 @@ export default function DevicesPage() {
         setRegistrationToken(token);
         setShowTokenModal(true);
       } else {
-        alert('Registration token belum tersedia. Silakan hubungi admin.');
+        alert('Registration token belum tersedia. Silakan hubungi super admin.');
       }
     } catch (err: any) {
       console.error('Failed to load token:', err);
-      alert('Gagal memuat registration token');
+      if (err.response?.status === 403) {
+        alert('Anda tidak memiliki akses ke data tenant ini.');
+      } else {
+        alert('Gagal memuat registration token: ' + (err.response?.data?.error || err.message));
+      }
     } finally {
       setLoadingToken(false);
     }
