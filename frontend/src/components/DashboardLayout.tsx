@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Monitor,
@@ -17,10 +17,13 @@ import {
   LogOut,
   Menu,
   X,
+  Key,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import api from '../lib/api';
 
-const navItems = [
+// Super admin navigation
+const superAdminNav = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/dashboard/devices', label: 'Devices', icon: Tv },
   { to: '/dashboard/media', label: 'Media', icon: Image },
@@ -35,10 +38,41 @@ const navItems = [
   { to: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
+// Tenant admin navigation
+const tenantAdminNav = [
+  { to: '/dashboard/tenant', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/dashboard/tenant', label: 'Users', icon: Users, tab: 'users' },
+  { to: '/dashboard/tenant', label: 'Devices', icon: Tv, tab: 'devices' },
+  { to: '/dashboard/tenant', label: 'Token', icon: Key, tab: 'token' },
+  { to: '/dashboard/settings', label: 'Settings', icon: Settings },
+];
+
+// Regular user navigation (editor/viewer)
+const userNav = [
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/dashboard/devices', label: 'Devices', icon: Tv },
+  { to: '/dashboard/media', label: 'Media', icon: Image },
+  { to: '/dashboard/playlists', label: 'Playlists', icon: ListMusic },
+  { to: '/dashboard/schedules', label: 'Schedules', icon: Calendar },
+  { to: '/dashboard/settings', label: 'Settings', icon: Settings },
+];
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [userRole, setUserRole] = useState<string>('viewer');
+
+  useEffect(() => {
+    api.get('/auth/me').then(res => {
+      setUserRole(res.data.user?.role || 'viewer');
+    }).catch(() => {});
+  }, []);
+
+  // Get nav items based on role
+  const navItems = userRole === 'super_admin' ? superAdminNav
+    : userRole === 'admin' ? tenantAdminNav
+    : userNav;
 
   function handleLogout() {
     localStorage.removeItem('access_token');
@@ -62,7 +96,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <Monitor className="w-4 h-4 text-white" />
               </div>
-              <span className="font-bold text-white text-sm">Digital Signage</span>
+              <div>
+                <span className="font-bold text-white text-sm">Digital Signage</span>
+                {userRole !== 'super_admin' && (
+                  <p className="text-xs text-gray-500 capitalize">{userRole.replace('_', ' ')}</p>
+                )}
+              </div>
             </div>
           )}
           <button
@@ -75,7 +114,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         {/* Navigation */}
         <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
-          {navItems.map((item) => {
+          {navItems.map((item, index) => {
             const Icon = item.icon;
             const isActive =
               item.to === '/dashboard'
@@ -84,7 +123,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
             return (
               <Link
-                key={item.to}
+                key={`${item.to}-${index}`}
                 to={item.to}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import bcrypt from 'bcrypt';
 import { query, queryOne, execute, paginatedQuery } from '../../services/query';
 import { authenticate } from '../../middleware/auth.middleware';
 import { requireRole } from '../../middleware/permission.middleware';
@@ -186,8 +187,28 @@ router.post('/admin/tenants', authenticate, requireRole('super_admin'), async (r
       }
     }
 
-    const tenant = await queryOne<TenantRow>('SELECT * FROM tenants WHERE id = ?', [result.insertId]);
-    res.status(201).json({ tenant, registration_token: registrationToken });
+    const tenantId = result.insertId;
+    const tenant = await queryOne<TenantRow>('SELECT * FROM tenants WHERE id = ?', [tenantId]);
+
+    // Create tenant admin user
+    const adminEmail = contact_email || `admin@${slug}.com`;
+    const adminPassword = 'password123'; // Default password, user should change
+    const passwordHash = await bcrypt.hash(adminPassword, 10);
+
+    await execute(
+      `INSERT INTO users (tenant_id, email, password_hash, full_name, role, status)
+       VALUES (?, ?, ?, ?, 'admin', 'ACTIVE')`,
+      [tenantId, adminEmail, passwordHash, `${name} Admin`]
+    );
+
+    res.status(201).json({
+      tenant,
+      registration_token: registrationToken,
+      admin_user: {
+        email: adminEmail,
+        password: adminPassword,
+      },
+    });
   } catch (err) {
     console.error('Admin create tenant error:', err);
     res.status(500).json({ error: 'Internal server error' });

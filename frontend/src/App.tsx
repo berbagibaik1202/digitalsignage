@@ -13,6 +13,7 @@ import SettingsPage from './pages/SettingsPage';
 import CommandsPage from './pages/CommandsPage';
 import AdminPage from './pages/AdminPage';
 import PlayerPage from './pages/PlayerPage';
+import TenantDashboardPage from './pages/TenantDashboardPage';
 import DashboardLayout from './components/DashboardLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/dashboard/users" element={<ProtectedRoute><DashboardLayout><UsersPage /></DashboardLayout></ProtectedRoute>} />
         <Route path="/dashboard/commands" element={<ProtectedRoute><DashboardLayout><CommandsPage /></DashboardLayout></ProtectedRoute>} />
         <Route path="/dashboard/admin" element={<ProtectedRoute><DashboardLayout><AdminPage /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/dashboard/tenant" element={<ProtectedRoute><DashboardLayout><TenantDashboardPage /></DashboardLayout></ProtectedRoute>} />
         <Route path="/dashboard/settings" element={<ProtectedRoute><DashboardLayout><SettingsPage /></DashboardLayout></ProtectedRoute>} />
         <Route path="/player" element={<PlayerPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

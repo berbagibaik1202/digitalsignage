@@ -19,7 +19,16 @@ export default function LoginPage() {
       const res = await api.post('/auth/login', { email, password });
       localStorage.setItem('access_token', res.data.access_token);
       localStorage.setItem('refresh_token', res.data.refresh_token);
-      navigate('/dashboard');
+
+      // Get user role to determine redirect
+      const meRes = await api.get('/auth/me');
+      const role = meRes.data.user?.role;
+
+      if (role === 'super_admin') {
+        navigate('/dashboard');
+      } else {
+        navigate('/dashboard/tenant');
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed');
     } finally {

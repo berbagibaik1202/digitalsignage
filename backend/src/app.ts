@@ -15,6 +15,7 @@ import monitoringRoutes from './modules/monitoring/monitoring.routes';
 import playerRoutes from './modules/player/player.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import commandRoutes from './modules/commands/commands.routes';
+import tenantDashboardRoutes from './modules/tenant-dashboard/tenant-dashboard.routes';
 import { auditLog } from './middleware/audit.middleware';
 
 const app = express();
@@ -41,6 +42,7 @@ app.use('/api/v1', monitoringRoutes);
 app.use('/api/v1', playerRoutes);
 app.use('/api/v1', adminRoutes);
 app.use('/api/v1', commandRoutes);
+app.use('/api/v1', tenantDashboardRoutes);
 
 // 404 handler
 app.use((_req, res) => {
