@@ -1,81 +1,41 @@
 @echo off
 REM ============================================================
-REM Digital Signage Kiosk Browser - Windows
+REM Digital Signage Player - Launch Electron App
 REM Usage: Double-click kiosk.bat
 REM ============================================================
 
-set PLATFORM_URL=https://display.rizki-tech.com/player
-set BROWSER=""
-set FOUND=0
+echo.
+echo ==========================================
+echo  Digital Signage Player
+echo ==========================================
+echo.
 
-REM --- Cari Chrome ---
-where chrome.exe >nul 2>&1 && (
-    set "BROWSER=chrome.exe"
-    set FOUND=1
+REM --- Cek apakah player sudah di-install ---
+if exist "release\Digital Signage Player.exe" (
+    echo Menjalankan Electron Player...
+    start "" "release\Digital Signage Player.exe"
+    exit /b 0
 )
 
-if %FOUND%==0 (
-    if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" (
-        set "BROWSER=C:\Program Files\Google\Chrome\Application\chrome.exe"
-        set FOUND=1
-    )
+if exist "node_modules\.bin\electron" (
+    echo Menjalankan Electron Player (dev mode)...
+    npx electron .
+    exit /b 0
 )
 
-if %FOUND%==0 (
-    if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" (
-        set "BROWSER=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
-        set FOUND=1
-    )
-)
+REM --- Fallback: install dulu ---
+echo Player belum di-install.
+echo Menjalankan npm install...
+call npm install
 
-REM --- Cari Edge ---
-if %FOUND%==0 (
-    where msedge.exe >nul 2>&1 && (
-        set "BROWSER=msedge.exe"
-        set FOUND=1
-    )
-)
-
-if %FOUND%==0 (
-    if exist "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" (
-        set "BROWSER=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-        set FOUND=1
-    )
-)
-
-REM --- Cari Firefox ---
-if %FOUND%==0 (
-    where firefox.exe >nul 2>&1 && (
-        set "BROWSER=firefox.exe"
-        set FOUND=1
-    )
-)
-
-if %FOUND%==0 (
+if errorlevel 1 (
     echo.
-    echo [ERROR] Tidak ditemukan browser!
-    echo Install Chrome, Edge, atau Firefox terlebih dahulu.
+    echo [ERROR] Gagal install dependencies!
     echo.
     pause
     exit /b 1
 )
 
 echo.
-echo ==========================================
-echo  Digital Signage Player (Kiosk Mode)
-echo ==========================================
-echo  URL    : %PLATFORM_URL%
-echo  Browser: %BROWSER%
-echo ==========================================
-echo.
-echo Tekan Ctrl+C untuk keluar dari kiosk mode
-echo.
-
-REM --- Jalankan dalam kiosk mode ---
-if "%BROWSER%"=="chrome.exe" (
-    "%BROWSER%" --kiosk --no-first-run --disable-session-crashed-bubble --disable-infobars --disable-extensions --disable-translate --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding "%PLATFORM_URL%"
-) else if "%BROWSER%"=="msedge.exe" (
-    "%BROWSER%" --kiosk --no-first-run --disable-session-crashed-bubble --disable-infobars --disable-translate "%PLATFORM_URL%"
-) else (
-    "%BROWSER%" --kiosk "%PLATFORM_URL%"
-)
+echo Menjalankan Player...
+npx electron .

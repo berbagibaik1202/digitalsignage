@@ -1,9 +1,10 @@
 const { app, BrowserWindow, screen } = require('electron');
+const path = require('path');
 
 // ============================================================
-// Digital Signage Player (Kiosk Mode)
+// Digital Signage Player (Electron)
+// Loads the React player app from dist/ folder
 // ============================================================
-const PLATFORM_URL = process.env.PLATFORM_URL || 'https://display.rizki-tech.com/player';
 
 let mainWindow = null;
 
@@ -22,25 +23,41 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true,
+      webSecurity: false, // Allow loading local files
     },
   });
 
-  mainWindow.loadURL(PLATFORM_URL);
+  // Load the built React player app
+  const indexPath = path.join(__dirname, '..', 'player', 'dist', 'index.html');
 
+  // Check if player dist exists
+  const fs = require('fs');
+  if (fs.existsSync(indexPath)) {
+    mainWindow.loadFile(indexPath);
+  } else {
+    // Fallback: load from web (for development)
+    console.log('[Player] Local build not found, loading from web...');
+    mainWindow.loadURL('https://display.rizki-tech.com/player');
+  }
+
+  // Handle errors
   mainWindow.webContents.on('did-fail-load', () => {
-    setTimeout(() => mainWindow.loadURL(PLATFORM_URL), 5000);
+    setTimeout(() => {
+      if (fs.existsSync(indexPath)) {
+        mainWindow.loadFile(indexPath);
+      } else {
+        mainWindow.loadURL('https://display.rizki-tech.com/player');
+      }
+    }, 5000);
   });
 
+  // Hide cursor
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow.webContents.insertCSS('* { cursor: none !important; }');
   });
 
+  // Prevent new windows
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-
-  mainWindow.webContents.on('render-process-gone', () => {
-    setTimeout(() => mainWindow.loadURL(PLATFORM_URL), 2000);
-  });
 
   mainWindow.on('closed', () => { mainWindow = null; });
 }
@@ -54,4 +71,4 @@ app.whenReady().then(() => {
 app.on('before-quit', (e) => { e.preventDefault(); });
 process.on('uncaughtException', () => {});
 
-console.log(`[Kiosk] Digital Signage Player — ${PLATFORM_URL}`);
+console.log('[Player] Digital Signage Player (Electron)');

@@ -1,52 +1,42 @@
 #!/bin/bash
 # ============================================================
-# Digital Signage Player (Kiosk Mode) - Linux
+# Digital Signage Player - Launch Electron App
 # Usage: chmod +x kiosk.sh && ./kiosk.sh
 # ============================================================
 
-PLATFORM_URL="https://display.rizki-tech.com/player"
-
 echo ""
 echo "=========================================="
-echo " Digital Signage Player (Kiosk Mode)"
-echo "=========================================="
-echo " URL: $PLATFORM_URL"
+echo " Digital Signage Player"
 echo "=========================================="
 echo ""
-echo "Tekan Ctrl+C untuk keluar dari kiosk mode"
-echo ""
 
-# --- Cari browser ---
-BROWSER=""
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
 
-if command -v google-chrome &> /dev/null; then
-    BROWSER="google-chrome"
-elif command -v google-chrome-stable &> /dev/null; then
-    BROWSER="google-chrome-stable"
-elif command -v chromium-browser &> /dev/null; then
-    BROWSER="chromium-browser"
-elif command -v chromium &> /dev/null; then
-    BROWSER="chromium"
-elif command -v firefox &> /dev/null; then
-    BROWSER="firefox"
-elif command -v microsoft-edge &> /dev/null; then
-    BROWSER="microsoft-edge"
+# --- Cek apakah player sudah di-install ---
+if [ -f "release/Digital Signage Player" ]; then
+    echo "Menjalankan Electron Player..."
+    ./release/"Digital Signage Player"
+    exit 0
 fi
 
-if [ -z "$BROWSER" ]; then
-    echo "[ERROR] Tidak ditemukan browser!"
-    echo "Install Chrome, Chromium, atau Firefox."
+if [ -f "node_modules/.bin/electron" ]; then
+    echo "Menjalankan Electron Player (dev mode)..."
+    npx electron .
+    exit 0
+fi
+
+# --- Fallback: install dulu ---
+echo "Player belum di-install."
+echo "Menjalankan npm install..."
+npm install
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "[ERROR] Gagal install dependencies!"
     exit 1
 fi
 
-echo "Browser: $BROWSER"
 echo ""
-
-# --- Jalankan kiosk mode ---
-if [[ "$BROWSER" == *"chrome"* ]] || [[ "$BROWSER" == *"chromium"* ]]; then
-    "$BROWSER" --kiosk --no-first-run --disable-session-crashed-bubble --disable-infobars --disable-extensions --disable-translate --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding "$PLATFORM_URL"
-elif [[ "$BROWSER" == *"firefox"* ]]; then
-    "$BROWSER" --kiosk "$PLATFORM_URL"
-else
-    "$BROWSER" --kiosk "$PLATFORM_URL"
-fi
+echo "Menjalankan Player..."
+npx electron .
