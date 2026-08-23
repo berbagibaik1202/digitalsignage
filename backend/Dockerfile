@@ -22,8 +22,14 @@ RUN npm ci --omit=dev
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy source files (needed for ts-node migration)
+COPY --from=builder /app/src ./src
+
 # Copy migrations folder (needed for npm run migrate)
 COPY --from=builder /app/migrations ./migrations
+
+# Copy config files needed at runtime
+COPY --from=builder /app/.env* ./
 
 EXPOSE 3000
 
