@@ -1,10 +1,10 @@
 @echo off
 REM ============================================================
 REM Digital Signage Kiosk Browser - Windows
-REM Usage: Double-click kiosk.bat atau jalankan dari CMD
+REM Usage: Double-click kiosk.bat
 REM ============================================================
 
-set PLATFORM_URL=https://display.rizki-tech.com
+set PLATFORM_URL=https://display.rizki-tech.com/player
 set BROWSER=""
 set FOUND=0
 
@@ -62,7 +62,7 @@ if %FOUND%==0 (
 
 echo.
 echo ==========================================
-echo  Digital Signage Kiosk Browser
+echo  Digital Signage Player (Kiosk Mode)
 echo ==========================================
 echo  URL    : %PLATFORM_URL%
 echo  Browser: %BROWSER%

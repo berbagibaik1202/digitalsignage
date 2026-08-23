@@ -1,14 +1,14 @@
 #!/bin/bash
 # ============================================================
-# Digital Signage Kiosk Browser - Linux
+# Digital Signage Player (Kiosk Mode) - Linux
 # Usage: chmod +x kiosk.sh && ./kiosk.sh
 # ============================================================
 
-PLATFORM_URL="https://display.rizki-tech.com"
+PLATFORM_URL="https://display.rizki-tech.com/player"
 
 echo ""
 echo "=========================================="
-echo " Digital Signage Kiosk Browser"
+echo " Digital Signage Player (Kiosk Mode)"
 echo "=========================================="
 echo " URL: $PLATFORM_URL"
 echo "=========================================="
@@ -46,7 +46,6 @@ echo ""
 if [[ "$BROWSER" == *"chrome"* ]] || [[ "$BROWSER" == *"chromium"* ]]; then
     "$BROWSER" --kiosk --no-first-run --disable-session-crashed-bubble --disable-infobars --disable-extensions --disable-translate --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding "$PLATFORM_URL"
 elif [[ "$BROWSER" == *"firefox"* ]]; then
-    # Firefox kiosk mode
     "$BROWSER" --kiosk "$PLATFORM_URL"
 else
     "$BROWSER" --kiosk "$PLATFORM_URL"
