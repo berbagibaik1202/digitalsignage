@@ -1,0 +1,12 @@
+CREATE TABLE layouts (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id BIGINT UNSIGNED NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    description TEXT NULL,
+    width INT DEFAULT 1920,
+    height INT DEFAULT 1080,
+    background_color VARCHAR(20) DEFAULT '#000000',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_layouts_tenant (tenant_id)
+);

@@ -1,0 +1,20 @@
+{
+  "name": "digital-signage",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Digital Signage SaaS Platform",
+  "scripts": {
+    "setup": "node scripts/setup-env.js",
+    "setup:env": "node scripts/setup-env.js",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build": "cd backend && npm run build && cd ../frontend && npm run build",
+    "migrate": "cd backend && npm run migrate",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:build": "docker compose build"
+  },
+  "devDependencies": {}
+}

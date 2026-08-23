@@ -1,0 +1,16 @@
+CREATE TABLE tenants (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    slug VARCHAR(100) NOT NULL,
+    logo_url VARCHAR(500) NULL,
+    contact_email VARCHAR(255) NULL,
+    contact_phone VARCHAR(50) NULL,
+    address TEXT NULL,
+    timezone VARCHAR(50) DEFAULT 'UTC',
+    status ENUM('ACTIVE', 'SUSPENDED', 'CANCELLED') DEFAULT 'ACTIVE',
+    max_devices INT UNSIGNED DEFAULT 10,
+    max_storage_mb INT UNSIGNED DEFAULT 1024,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_tenants_slug (slug)
+);

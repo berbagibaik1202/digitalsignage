@@ -1,0 +1,9 @@
+CREATE TABLE device_groups (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id BIGINT UNSIGNED NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    description TEXT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_device_groups_tenant (tenant_id)
+);

@@ -1,0 +1,11 @@
+CREATE TABLE playlists (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    tenant_id BIGINT UNSIGNED NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    description TEXT NULL,
+    loop_playback BOOLEAN DEFAULT TRUE,
+    created_by BIGINT UNSIGNED NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_playlists_tenant (tenant_id)
+);
