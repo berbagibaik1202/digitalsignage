@@ -258,7 +258,7 @@ router.delete('/admin/tenants/:id', authenticate, requireRole('super_admin'), as
       return;
     }
 
-    await execute("UPDATE tenants SET status = 'INACTIVE' WHERE id = ?", [id]);
+    await execute("UPDATE tenants SET status = 'SUSPENDED' WHERE id = ?", [id]);
     res.json({ message: 'Tenant deactivated' });
   } catch (err) {
     console.error('Admin delete tenant error:', err);

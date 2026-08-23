@@ -204,10 +204,9 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
 
     // Find active schedules that target this device
     const schedules = await query<RowDataPacket[]>(
-      `SELECT s.*, sp.playlist_id
+      `SELECT s.*
        FROM schedules s
        LEFT JOIN schedule_targets st ON st.schedule_id = s.id AND st.tenant_id = s.tenant_id
-       LEFT JOIN playlists sp ON s.playlist_id = sp.id
        WHERE s.tenant_id = ?
          AND s.is_active = TRUE
          AND s.start_date <= CURDATE()

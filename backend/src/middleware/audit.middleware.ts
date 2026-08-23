@@ -77,8 +77,8 @@ export function auditLog(req: Request, _res: Response, next: NextFunction): void
 
   // Log asynchronously — don't block the request
   execute(
-    `INSERT INTO audit_logs (tenant_id, user_id, log_action, resource_type, resource_id, ip_address, user_agent, request_method, request_path)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO audit_logs (tenant_id, user_id, log_action, entity_type, entity_id, ip_address, user_agent)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       tenantId,
       userId,
@@ -87,8 +87,6 @@ export function auditLog(req: Request, _res: Response, next: NextFunction): void
       resourceId,
       ipAddress,
       userAgent,
-      method,
-      req.originalUrl,
     ]
   ).catch((err) => {
     console.error('Audit log failed:', err);
