@@ -4,6 +4,8 @@ import { authenticate } from '../../middleware/auth.middleware';
 import { requireRole } from '../../middleware/permission.middleware';
 import { RowDataPacket } from 'mysql2';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import { config } from '../../config';
 
 const router = Router();
 
@@ -127,12 +129,9 @@ router.post('/player/auth', async (req: Request, res: Response) => {
     }
 
     // Generate a session JWT for the player
-    const jwt = require('jsonwebtoken');
-    const config = require('../../config');
-
     const sessionToken = jwt.sign(
       { deviceId: device.id, deviceUuid: device.device_uuid, tenantId: device.tenant_id, type: 'device' },
-      config.default.jwt.secret,
+      config.jwt.secret,
       { expiresIn: '24h' }
     );
 
