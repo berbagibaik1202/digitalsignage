@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import { query, queryOne, execute, paginatedQuery } from '../../services/query';
 import { authenticate } from '../../middleware/auth.middleware';
 import { requireRole } from '../../middleware/permission.middleware';
@@ -18,6 +19,7 @@ interface TenantRow extends RowDataPacket {
   status: string;
   max_devices: number;
   max_storage_mb: number;
+  registration_token: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -98,15 +100,18 @@ router.post('/tenants', authenticate, requireRole('super_admin'), async (req: Re
       return;
     }
 
+    // Generate registration token for device pairing
+    const registrationToken = crypto.randomBytes(32).toString('hex');
+
     const result = await execute(
-      `INSERT INTO tenants (name, slug, contact_email, contact_phone, address, timezone)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [name, slug, contact_email || null, contact_phone || null, address || null, timezone || 'UTC']
+      `INSERT INTO tenants (name, slug, contact_email, contact_phone, address, timezone, registration_token)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [name, slug, contact_email || null, contact_phone || null, address || null, timezone || 'UTC', registrationToken]
     );
 
     const tenant = await queryOne<TenantRow>('SELECT * FROM tenants WHERE id = ?', [result.insertId]);
 
-    res.status(201).json({ tenant });
+    res.status(201).json({ tenant, registration_token: registrationToken });
   } catch (err) {
     console.error('Create tenant error:', err);
     res.status(500).json({ error: 'Internal server error' });
