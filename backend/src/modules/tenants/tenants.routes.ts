@@ -49,6 +49,34 @@ router.get('/tenants', authenticate, requireRole('super_admin'), async (req: Req
   }
 });
 
+// ─── GET /api/v1/tenants/me/token ─────────────────────────────
+// Get current user's tenant registration token (MUST be before /:id route)
+router.get('/tenants/me/token', authenticate, requireRole('super_admin', 'admin'), async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+
+    if (!tenantId) {
+      res.status(404).json({ error: 'User tidak memiliki tenant' });
+      return;
+    }
+
+    const tenant = await queryOne<TenantRow>(
+      'SELECT id, name, registration_token FROM tenants WHERE id = ?',
+      [tenantId]
+    );
+
+    if (!tenant) {
+      res.status(404).json({ error: 'Tenant tidak ditemukan' });
+      return;
+    }
+
+    res.json({ tenant });
+  } catch (err) {
+    console.error('Get my tenant token error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ─── GET /api/v1/tenants/:id ────────────────────────────────────
 router.get('/tenants/:id', authenticate, requireRole('super_admin', 'admin'), async (req: Request, res: Response) => {
   try {
