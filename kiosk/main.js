@@ -1,11 +1,12 @@
 const { app, BrowserWindow, screen } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 // ============================================================
 // Digital Signage Player (Electron)
-// Loads the React player app from dist/ folder
 // ============================================================
 
+const WEB_URL = 'https://display.rizki-tech.com/player';
 let mainWindow = null;
 
 function createWindow() {
@@ -23,40 +24,38 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false, // Allow loading local files
     },
   });
 
-  // Load the built React player app
-  const indexPath = path.join(__dirname, '..', 'player', 'dist', 'index.html');
+  // Try local build first, then fallback to web
+  const localPath = path.join(__dirname, '..', 'player', 'dist', 'index.html');
 
-  // Check if player dist exists
-  const fs = require('fs');
-  if (fs.existsSync(indexPath)) {
-    mainWindow.loadFile(indexPath);
+  if (fs.existsSync(localPath)) {
+    console.log('[Player] Loading from local build...');
+    mainWindow.loadFile(localPath);
   } else {
-    // Fallback: load from web (for development)
-    console.log('[Player] Local build not found, loading from web...');
-    mainWindow.loadURL('https://display.rizki-tech.com/player');
+    console.log('[Player] Loading from web:', WEB_URL);
+    mainWindow.loadURL(WEB_URL);
   }
 
-  // Handle errors
-  mainWindow.webContents.on('did-fail-load', () => {
+  // Handle load errors - retry
+  mainWindow.webContents.on('did-fail-load', (event, code, desc) => {
+    console.log(`[Player] Load failed: ${code} - ${desc}, retrying...`);
     setTimeout(() => {
-      if (fs.existsSync(indexPath)) {
-        mainWindow.loadFile(indexPath);
+      if (fs.existsSync(localPath)) {
+        mainWindow.loadFile(localPath);
       } else {
-        mainWindow.loadURL('https://display.rizki-tech.com/player');
+        mainWindow.loadURL(WEB_URL);
       }
-    }, 5000);
+    }, 3000);
   });
 
-  // Hide cursor
+  // Hide cursor when loaded
   mainWindow.webContents.on('did-finish-load', () => {
-    mainWindow.webContents.insertCSS('* { cursor: none !important; }');
+    mainWindow.webContents.insertCSS('body, html { cursor: none !important; overflow: hidden; }');
   });
 
-  // Prevent new windows
+  // Prevent opening new windows
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   mainWindow.on('closed', () => { mainWindow = null; });
@@ -64,11 +63,21 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
-  app.on('window-all-closed', (e) => { e.preventDefault(); createWindow(); });
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+
+  app.on('window-all-closed', (e) => {
+    e.preventDefault();
+  });
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
 });
 
+// Prevent app from quitting
 app.on('before-quit', (e) => { e.preventDefault(); });
-process.on('uncaughtException', () => {});
+
+process.on('uncaughtException', (err) => {
+  console.error('[Player] Error:', err);
+});
 
 console.log('[Player] Digital Signage Player (Electron)');

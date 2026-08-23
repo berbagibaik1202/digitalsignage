@@ -1,21 +1,20 @@
 {
   "name": "digitalsignage-kiosk",
   "version": "1.0.0",
-  "description": "Digital Signage Kiosk Browser",
+  "description": "Digital Signage Player (Electron)",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build:win": "electron-builder --win",
-    "build:linux": "electron-builder --linux",
-    "build:mac": "electron-builder --mac"
+    "build:linux": "electron-builder --linux"
   },
   "devDependencies": {
     "electron": "^35.7.2",
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "com.digitalsignage.kiosk",
-    "productName": "Digital Signage Kiosk",
+    "appId": "com.digitalsignage.player",
+    "productName": "Digital Signage Player",
     "directories": {
       "output": "release"
     },
@@ -25,9 +24,6 @@
     },
     "win": {
       "target": ["nsis"]
-    },
-    "mac": {
-      "target": ["dmg"]
     }
   }
 }

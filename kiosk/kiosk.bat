@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM Digital Signage Player - Launch Electron App
+REM Digital Signage Player - Electron App
 REM Usage: Double-click kiosk.bat
 REM ============================================================
 
@@ -9,33 +9,32 @@ echo ==========================================
 echo  Digital Signage Player
 echo ==========================================
 echo.
+echo  URL: https://display.rizki-tech.com/player
+echo ==========================================
+echo.
 
-REM --- Cek apakah player sudah di-install ---
-if exist "release\Digital Signage Player.exe" (
-    echo Menjalankan Electron Player...
-    start "" "release\Digital Signage Player.exe"
-    exit /b 0
-)
-
-if exist "node_modules\.bin\electron" (
-    echo Menjalankan Electron Player (dev mode)...
-    npx electron .
-    exit /b 0
-)
-
-REM --- Fallback: install dulu ---
-echo Player belum di-install.
-echo Menjalankan npm install...
-call npm install
-
+REM --- Cek Node.js ---
+where node >nul 2>&1
 if errorlevel 1 (
-    echo.
-    echo [ERROR] Gagal install dependencies!
-    echo.
+    echo [ERROR] Node.js tidak ditemukan!
+    echo Install dari: https://nodejs.org
     pause
     exit /b 1
 )
 
-echo.
+REM --- Cek apakah node_modules sudah ada ---
+if not exist "node_modules" (
+    echo Install dependencies...
+    call npm install
+    if errorlevel 1 (
+        echo [ERROR] Gagal install!
+        pause
+        exit /b 1
+    )
+)
+
 echo Menjalankan Player...
+echo.
+
+REM --- Jalankan Electron ---
 npx electron .
