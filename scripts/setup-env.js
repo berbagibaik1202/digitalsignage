@@ -98,6 +98,9 @@ MINIO_ACCESS_KEY=${minioAccessKey}
 MINIO_SECRET_KEY=${minioSecretKey}
 MINIO_BUCKET=digital-signage
 MINIO_USE_SSL=false
+# Set this to your public domain/IP so uploaded media is viewable in the browser,
+# e.g. https://storage.your-domain.com or http://YOUR_VPS_IP:9000
+MINIO_PUBLIC_URL=
 
 # ─── Workers ────────────────────────────────────────────────
 # Set to 'true' to enable BullMQ media processing workers
