@@ -7,8 +7,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "migrate": "ts-node src/database/migrate.ts",
-    "migrate:status": "ts-node src/database/migrate.ts status",
+    "migrate": "node dist/database/migrate.js",
+    "migrate:status": "node dist/database/migrate.js status",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
