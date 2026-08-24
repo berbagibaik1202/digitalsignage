@@ -9,6 +9,7 @@ import {
   type TransitionEffect,
 } from './mediaTransition';
 import ClockDisplay from './clockDisplay';
+import TextMarquee from './TextMarquee';
 
 interface MediaItem {
   item_id: number;
@@ -227,7 +228,11 @@ export default function LayoutView({ layout }: { layout: Layout }) {
           );
         }
         if (zone.zone_type === 'TEXT') {
-          return <div key={zone.id} className="absolute flex items-center justify-center text-white" style={style}>{String(zone.config.text || zone.name)}</div>;
+          return (
+            <div key={zone.id} className="absolute overflow-hidden" style={style}>
+              <TextMarquee text={String(zone.config.text || zone.name)} />
+            </div>
+          );
         }
         return <div key={zone.id} className="absolute bg-black" style={style} />;
       })}

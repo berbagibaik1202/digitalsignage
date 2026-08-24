@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import ClockDisplay from './ClockDisplay';
+import TextMarquee from './TextMarquee';
 
 interface MediaItem {
   item_id: number;
@@ -73,7 +74,7 @@ export default function WebPlayerLayoutView({ layout, loadMedia }: WebPlayerLayo
         };
         if (zone.zone_type === 'MEDIA') return <div key={zone.id} style={style}><MediaZone zone={zone} loadMedia={loadMedia} /></div>;
         if (zone.zone_type === 'CLOCK') return <div key={zone.id} style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}><ClockDisplay config={zone.config} /></div>;
-        if (zone.zone_type === 'TEXT') return <div key={zone.id} style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>{String(zone.config.text || zone.name)}</div>;
+        if (zone.zone_type === 'TEXT') return <div key={zone.id} style={{ ...style, overflow: 'hidden' }}><TextMarquee text={String(zone.config.text || zone.name)} /></div>;
         return <div key={zone.id} style={{ ...style, background: '#000' }} />;
       })}
     </div>

@@ -93,6 +93,7 @@ export default function LayoutsPage() {
   const [zoneH, setZoneH] = useState(1080);
   const [zoneZ, setZoneZ] = useState(0);
   const [zonePlaylistId, setZonePlaylistId] = useState('');
+  const [zoneTextContent, setZoneTextContent] = useState('');
   const [zoneClockFormat, setZoneClockFormat] = useState(DEFAULT_CLOCK_FORMAT);
   const [zoneClockFontFamily, setZoneClockFontFamily] = useState(DEFAULT_CLOCK_FONT_FAMILY);
   const [zoneClockFontSize, setZoneClockFontSize] = useState(DEFAULT_CLOCK_FONT_SIZE);
@@ -159,6 +160,8 @@ export default function LayoutsPage() {
       const normalizedZoneType = zoneType === 'HTML' ? 'WEB' : zoneType;
       const config = normalizedZoneType === 'MEDIA'
         ? (zonePlaylistId ? { playlist_id: Number(zonePlaylistId) } : {})
+        : normalizedZoneType === 'TEXT'
+          ? { text: zoneTextContent.trim() || zoneName.trim() }
         : normalizedZoneType === 'CLOCK'
           ? {
               format: zoneClockFormat,
@@ -214,6 +217,7 @@ export default function LayoutsPage() {
     setZoneH(zone.height);
     setZoneZ(zone.z_index);
     setZonePlaylistId(config.playlist_id ? String(config.playlist_id) : '');
+    setZoneTextContent(typeof config.text === 'string' ? config.text : zone.name || '');
     setZoneClockFormat(typeof config.format === 'string' ? config.format : DEFAULT_CLOCK_FORMAT);
     setZoneClockFontFamily(typeof config.font_family === 'string' ? config.font_family : DEFAULT_CLOCK_FONT_FAMILY);
     setZoneClockFontSize(Number(config.font_size) || DEFAULT_CLOCK_FONT_SIZE);
@@ -241,6 +245,7 @@ export default function LayoutsPage() {
     setZoneH(defaults.height);
     setZoneZ(0);
     setZonePlaylistId('');
+    setZoneTextContent('');
     setZoneClockFormat(DEFAULT_CLOCK_FORMAT);
     setZoneClockFontFamily(DEFAULT_CLOCK_FONT_FAMILY);
     setZoneClockFontSize(DEFAULT_CLOCK_FONT_SIZE);
@@ -411,6 +416,9 @@ export default function LayoutsPage() {
                     if (nextType !== 'MEDIA') {
                       setZonePlaylistId('');
                     }
+                    if (nextType === 'TEXT' && !zoneTextContent.trim()) {
+                      setZoneTextContent(zoneName.trim());
+                    }
                     if (nextType === 'CLOCK') {
                       setZoneClockFormat(DEFAULT_CLOCK_FORMAT);
                       setZoneClockFontFamily(DEFAULT_CLOCK_FONT_FAMILY);
@@ -430,6 +438,20 @@ export default function LayoutsPage() {
                     <option value="">Use schedule playlist</option>
                     {playlists.map(playlist => <option key={playlist.id} value={playlist.id}>{playlist.name}</option>)}
                   </select>
+                </div>
+              )}
+
+              {zoneType === 'TEXT' && (
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Text Content</label>
+                  <textarea
+                    value={zoneTextContent}
+                    onChange={e => setZoneTextContent(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y"
+                    placeholder="Tulis teks berjalan di sini"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Teks akan berjalan ke kiri sebagai running text.</p>
                 </div>
               )}
 

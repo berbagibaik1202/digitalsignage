@@ -257,6 +257,31 @@ img, video {
   text-align: center;
 }
 
+.text-marquee {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.text-marquee__track {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  min-width: 100%;
+  will-change: transform;
+  animation-name: textMarqueeScroll;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.text-marquee__content {
+  flex: 0 0 auto;
+  padding-right: 3rem;
+  white-space: nowrap;
+}
+
 @keyframes mediaFadeIn {
   from { opacity: 0; transform: scale(1.03); }
   to { opacity: 1; transform: scale(1); }
@@ -321,6 +346,11 @@ img, video {
   0% { transform: translateY(0) scale(1); opacity: 1; }
   45% { transform: translateY(-0.12em) scale(1.1); opacity: 0.95; }
   100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes textMarqueeScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
 /* Other */
