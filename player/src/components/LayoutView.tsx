@@ -202,6 +202,24 @@ function MediaZone({ zone }: { zone: Zone }) {
   );
 }
 
+function UrlZone({ zone }: { zone: Zone }) {
+  const url = typeof zone.config.url === 'string' ? zone.config.url : typeof zone.config.source_url === 'string' ? zone.config.source_url : '';
+
+  if (!url) {
+    return <div className="w-full h-full bg-black" />;
+  }
+
+  return (
+    <iframe
+      title={zone.name}
+      src={url}
+      loading="eager"
+      referrerPolicy="no-referrer"
+      className="w-full h-full border-0 bg-black"
+    />
+  );
+}
+
 export default function LayoutView({ layout }: { layout: Layout }) {
   return (
     <div className="w-screen h-screen overflow-hidden" style={{ backgroundColor: layout.background_color }}>
@@ -245,6 +263,13 @@ export default function LayoutView({ layout }: { layout: Layout }) {
                   fontWeight: 700,
                 }}
               />
+            </div>
+          );
+        }
+        if (zone.zone_type === 'WEB' || zone.zone_type === 'RSS') {
+          return (
+            <div key={zone.id} className="absolute overflow-hidden" style={style}>
+              <UrlZone zone={zone} />
             </div>
           );
         }

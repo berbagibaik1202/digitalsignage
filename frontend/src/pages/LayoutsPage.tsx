@@ -106,6 +106,7 @@ export default function LayoutsPage() {
   const [zoneClockFontFamily, setZoneClockFontFamily] = useState(DEFAULT_CLOCK_FONT_FAMILY);
   const [zoneClockFontSize, setZoneClockFontSize] = useState(DEFAULT_CLOCK_FONT_SIZE);
   const [zoneClockFontWeight, setZoneClockFontWeight] = useState(DEFAULT_CLOCK_FONT_WEIGHT);
+  const [zoneUrl, setZoneUrl] = useState('');
 
   useEffect(() => { loadLayouts(); }, [page, search]);
   useEffect(() => { loadPlaylists(); }, []);
@@ -166,6 +167,10 @@ export default function LayoutsPage() {
     if (!selectedLayout) return;
     try {
       const normalizedZoneType = zoneType === 'HTML' ? 'WEB' : zoneType;
+      if ((normalizedZoneType === 'WEB' || normalizedZoneType === 'RSS') && !zoneUrl.trim()) {
+        alert('URL web / RSS wajib diisi');
+        return;
+      }
       const config = normalizedZoneType === 'MEDIA'
         ? (zonePlaylistId ? { playlist_id: Number(zonePlaylistId) } : {})
         : normalizedZoneType === 'TEXT'
@@ -181,6 +186,10 @@ export default function LayoutsPage() {
               font_family: zoneClockFontFamily,
               font_size: zoneClockFontSize,
               font_weight: zoneClockFontWeight,
+            }
+        : normalizedZoneType === 'WEB' || normalizedZoneType === 'RSS'
+          ? {
+              url: zoneUrl.trim(),
             }
           : {};
       const data = {
@@ -238,6 +247,7 @@ export default function LayoutsPage() {
     setZoneClockFontFamily(typeof config.font_family === 'string' ? config.font_family : DEFAULT_CLOCK_FONT_FAMILY);
     setZoneClockFontSize(Number(config.font_size) || DEFAULT_CLOCK_FONT_SIZE);
     setZoneClockFontWeight(Number(config.font_weight) || DEFAULT_CLOCK_FONT_WEIGHT);
+    setZoneUrl(typeof config.url === 'string' ? config.url : typeof config.source_url === 'string' ? config.source_url : '');
     setShowZoneModal(true);
   }
 
@@ -269,6 +279,7 @@ export default function LayoutsPage() {
     setZoneClockFontFamily(DEFAULT_CLOCK_FONT_FAMILY);
     setZoneClockFontSize(DEFAULT_CLOCK_FONT_SIZE);
     setZoneClockFontWeight(DEFAULT_CLOCK_FONT_WEIGHT);
+    setZoneUrl('');
   }
 
   const zoneTypes = ['MEDIA', 'TEXT', 'CLOCK', 'WEATHER', 'RSS', 'WEB'];
@@ -460,6 +471,30 @@ export default function LayoutsPage() {
                     <option value="">Use schedule playlist</option>
                     {playlists.map(playlist => <option key={playlist.id} value={playlist.id}>{playlist.name}</option>)}
                   </select>
+                </div>
+              )}
+
+              {(zoneType === 'WEB' || zoneType === 'RSS') && (
+                <div className="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-white">{zoneType === 'WEB' ? 'Web Settings' : 'RSS Settings'}</h4>
+                    <p className="text-xs text-gray-500">
+                      {zoneType === 'WEB'
+                        ? 'Masukkan URL website yang ingin ditampilkan di zone ini.'
+                        : 'Masukkan URL RSS feed yang ingin ditampilkan di zone ini.'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">{zoneType === 'WEB' ? 'Website URL' : 'RSS Feed URL'}</label>
+                    <input
+                      type="url"
+                      value={zoneUrl}
+                      onChange={e => setZoneUrl(e.target.value)}
+                      placeholder={zoneType === 'WEB' ? 'https://example.com' : 'https://example.com/feed.xml'}
+                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
                 </div>
               )}
 

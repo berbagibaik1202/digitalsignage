@@ -61,6 +61,22 @@ function MediaZone({ zone, loadMedia }: { zone: WebPlayerLayout['zones'][number]
   return <img key={item.item_id} src={source} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
 }
 
+function UrlZone({ zone }: { zone: WebPlayerLayout['zones'][number] }) {
+  const url = typeof zone.config.url === 'string' ? zone.config.url : typeof zone.config.source_url === 'string' ? zone.config.source_url : '';
+  if (!url) return <div style={{ width: '100%', height: '100%', background: '#000' }} />;
+
+  return (
+    <iframe
+      key={zone.id}
+      src={url}
+      title={zone.name}
+      loading="eager"
+      referrerPolicy="no-referrer"
+      style={{ width: '100%', height: '100%', border: 0, background: '#000' }}
+    />
+  );
+}
+
 export default function WebPlayerLayoutView({ layout, loadMedia }: WebPlayerLayoutViewProps) {
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: layout.background_color, position: 'relative' }}>
@@ -94,6 +110,9 @@ export default function WebPlayerLayoutView({ layout, loadMedia }: WebPlayerLayo
               />
             </div>
           );
+        }
+        if (zone.zone_type === 'WEB' || zone.zone_type === 'RSS') {
+          return <div key={zone.id} style={style}><UrlZone zone={zone} /></div>;
         }
         return <div key={zone.id} style={{ ...style, background: '#000' }} />;
       })}
