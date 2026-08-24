@@ -39,7 +39,7 @@ export default function PlayerView({ onError }: PlayerViewProps) {
   const fetchManifest = useCallback(async () => {
     try {
       const m = await getManifest() as CachedManifest | null;
-      if (m && m.items.length > 0) {
+      if (m && (m.items.length > 0 || m.layout)) {
         if (m.manifest_version === manifestVersionRef.current) return;
 
         await cacheManifest(m, getPlayerSessionToken(), getMediaUrl);
@@ -49,7 +49,7 @@ export default function PlayerView({ onError }: PlayerViewProps) {
         setError(null);
       } else {
         const cachedManifest = getCachedManifest();
-        if (cachedManifest?.items.length) {
+        if (cachedManifest && (cachedManifest.items.length > 0 || cachedManifest.layout)) {
           manifestVersionRef.current = cachedManifest.manifest_version;
           setManifest(cachedManifest);
           setError(null);
@@ -59,7 +59,7 @@ export default function PlayerView({ onError }: PlayerViewProps) {
       }
     } catch (err: any) {
       const cachedManifest = getCachedManifest();
-      if (cachedManifest?.items.length) {
+      if (cachedManifest && (cachedManifest.items.length > 0 || cachedManifest.layout)) {
         manifestVersionRef.current = cachedManifest.manifest_version;
         setManifest(cachedManifest);
         setError(null);
@@ -85,7 +85,7 @@ export default function PlayerView({ onError }: PlayerViewProps) {
 
   // Play current item
   const playCurrentItem = useCallback(() => {
-    if (!manifest || manifest.items.length === 0) return;
+    if (!manifest || manifest.items.length === 0 || manifest.layout) return;
 
     const item = manifest.items[currentIndex];
     startTimeRef.current = Date.now();
@@ -136,7 +136,7 @@ export default function PlayerView({ onError }: PlayerViewProps) {
   }, [currentIndex, manifest, playCurrentItem]);
 
   useEffect(() => {
-    if (!manifest || manifest.items.length === 0) return;
+    if (!manifest || manifest.items.length === 0 || manifest.layout) return;
 
     let objectUrl: string | null = null;
     getCachedMediaUrl(manifest.items[currentIndex].media_url, getMediaUrl).then((cachedUrl) => {
@@ -181,7 +181,7 @@ export default function PlayerView({ onError }: PlayerViewProps) {
   }
 
   // ─── Black Screen (no content) ─────────────────────────────
-  if (isBlack || !manifest || manifest.items.length === 0) {
+  if (isBlack || !manifest || (manifest.items.length === 0 && !manifest.layout)) {
     return (
       <div className="w-screen h-screen bg-black flex items-center justify-center">
         <p className="text-gray-600 text-lg">Tidak ada konten</p>
@@ -189,10 +189,11 @@ export default function PlayerView({ onError }: PlayerViewProps) {
     );
   }
 
-  // ─── Current Item ──────────────────────────────────────────
   if (manifest.layout) {
     return <LayoutView layout={manifest.layout} />;
   }
+
+  // ─── Current Item ──────────────────────────────────────────
 
   const currentItem = manifest.items[currentIndex];
   const currentMediaUrl = mediaSource || getMediaUrl(currentItem.media_url);
