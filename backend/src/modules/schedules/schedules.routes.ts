@@ -6,6 +6,10 @@ import { RowDataPacket } from 'mysql2';
 
 const router = Router();
 
+function optionalValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
 interface ScheduleRow extends RowDataPacket {
   id: number;
   tenant_id: number;
@@ -150,9 +154,9 @@ router.post('/schedules', authenticate, requireRole('super_admin', 'admin', 'edi
       [
         tenantId, name, description || null,
         playlist_id || null, layout_id || null,
-        start_date, end_date || null,
-        start_time || null, end_time || null,
-        days_of_week || null, priority || 0
+        start_date, optionalValue(end_date),
+        optionalValue(start_time), optionalValue(end_time),
+        optionalValue(days_of_week), priority || 0
       ]
     );
 
@@ -203,6 +207,11 @@ router.put('/schedules/:id', authenticate, requireRole('super_admin', 'admin', '
       return;
     }
 
+    const normalizedEndDate = optionalValue(end_date);
+    const normalizedStartTime = optionalValue(start_time);
+    const normalizedEndTime = optionalValue(end_time);
+    const normalizedDaysOfWeek = optionalValue(days_of_week);
+
     await execute(
       `UPDATE schedules SET
         name = COALESCE(?, name),
@@ -210,14 +219,14 @@ router.put('/schedules/:id', authenticate, requireRole('super_admin', 'admin', '
         playlist_id = COALESCE(?, playlist_id),
         layout_id = COALESCE(?, layout_id),
         start_date = COALESCE(?, start_date),
-        end_date = COALESCE(?, end_date),
-        start_time = COALESCE(?, start_time),
-        end_time = COALESCE(?, end_time),
-        days_of_week = COALESCE(?, days_of_week),
+        end_date = ?,
+        start_time = ?,
+        end_time = ?,
+        days_of_week = ?,
         priority = COALESCE(?, priority),
         is_active = COALESCE(?, is_active)
        WHERE id = ? AND tenant_id = ?`,
-      [name, description, playlist_id, layout_id, start_date, end_date, start_time, end_time, days_of_week, priority, is_active, id, tenantId]
+      [name, description, playlist_id, layout_id, start_date, normalizedEndDate, normalizedStartTime, normalizedEndTime, normalizedDaysOfWeek, priority, is_active, id, tenantId]
     );
 
     // Update targets if provided

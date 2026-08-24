@@ -119,6 +119,9 @@ export default function SchedulesPage() {
         ...form,
         playlist_id: form.playlist_id ? Number(form.playlist_id) : null,
         layout_id: form.layout_id ? Number(form.layout_id) : null,
+        end_date: form.end_date || null,
+        start_time: form.start_time || null,
+        end_time: form.end_time || null,
         days_of_week: form.days_of_week.length > 0 ? form.days_of_week.join(',') : null,
       };
 
