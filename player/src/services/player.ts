@@ -1,6 +1,6 @@
 // Player Service — handles all communication with Digital Signage backend
 
-const API_BASE = localStorage.getItem('api_base') || window.location.origin;
+const DEFAULT_API_BASE = 'https://display.rizki-tech.com';
 
 interface DeviceInfo {
   device_uuid: string;
@@ -63,14 +63,14 @@ function setSessionToken(token: string) {
 }
 
 function getApiBase(): string {
-  return localStorage.getItem('api_base') || window.location.origin;
+  return localStorage.getItem('api_base') || DEFAULT_API_BASE;
 }
 
 function setApiBase(url: string) {
-  localStorage.setItem('api_base', url);
+  localStorage.setItem('api_base', url.replace(/\/$/, ''));
 }
 
-async function apiRequest(method: string, path: string, body?: unknown, useSession = true): Promise<any> {
+async function apiRequest(method: string, path: string, body?: unknown, useSession = true, allowReauthentication = true): Promise<any> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -87,6 +87,10 @@ async function apiRequest(method: string, path: string, body?: unknown, useSessi
     headers,
     body: body ? JSON.stringify(body) : undefined,
   });
+
+  if (res.status === 401 && useSession && allowReauthentication && await authenticateDevice()) {
+    return apiRequest(method, path, body, true, false);
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Request failed' }));

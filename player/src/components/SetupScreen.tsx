@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 interface SetupScreenProps {
-  onComplete: (apiBase: string, registrationToken: string) => void;
+  onComplete: (apiBase: string, registrationToken: string, deviceName?: string) => void;
   apiBase: string;
 }
 
@@ -29,7 +29,7 @@ export default function SetupScreen({ onComplete, apiBase }: SetupScreenProps) {
       if (!res.ok) throw new Error('Server tidak dapat diakses');
 
       // Store values and proceed
-      onComplete(serverUrl.replace(/\/$/, ''), registrationToken);
+      onComplete(serverUrl.replace(/\/$/, ''), registrationToken, deviceName || undefined);
     } catch (err: any) {
       setError(err.message || 'Gagal koneksi ke server');
     } finally {

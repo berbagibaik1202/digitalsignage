@@ -25,20 +25,23 @@ export default function App() {
 
   // Check if already registered on mount
   useEffect(() => {
-    if (isRegistered() && isAuthenticated()) {
-      setPhase('playing');
-    }
+    if (!isRegistered()) return;
+
+    setPhase('authenticating');
+    authenticateDevice().then((authenticated) => {
+      setPhase(authenticated ? 'playing' : 'setup');
+    });
   }, []);
 
   // Handle setup completion
-  const handleSetupComplete = useCallback(async (apiBase: string, registrationToken: string) => {
+  const handleSetupComplete = useCallback(async (apiBase: string, registrationToken: string, deviceName?: string) => {
     setApiBase(apiBase);
     setPhase('registering');
     setError(null);
 
     try {
       // Register device
-      const registered = await registerDevice(registrationToken);
+      const registered = await registerDevice(registrationToken, deviceName);
       if (!registered) {
         throw new Error('Registrasi device gagal');
       }
