@@ -181,6 +181,8 @@ docker compose exec backend npm run migrate
 | **API** | http://localhost:3000/api/v1/health |
 | **MinIO Console** | http://localhost:9001 |
 
+Media uploaded through the dashboard is served from `http://localhost:9000` by default. For a VPS or custom domain, set `MINIO_PUBLIC_URL` in `.env` to the browser-accessible MinIO URL, for example `https://media.example.com`.
+
 **Login Default:**
 - Email: `admin@demo.com`
 - Password: `password123`

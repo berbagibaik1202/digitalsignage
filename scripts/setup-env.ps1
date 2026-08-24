@@ -75,6 +75,8 @@ MINIO_ACCESS_KEY=$minioAccessKey
 MINIO_SECRET_KEY=$minioSecretKey
 MINIO_BUCKET=digital-signage
 MINIO_USE_SSL=false
+# Browser-facing MinIO URL used in media previews and downloads
+MINIO_PUBLIC_URL=http://localhost:9000
 
 # Workers
 WORKERS_ENABLED=true

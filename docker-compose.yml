@@ -86,7 +86,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-digital-signage}
       # Browser-facing base URL for media files (internal MINIO_ENDPOINT is Docker-only)
-      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-}
+      MINIO_PUBLIC_URL: ${MINIO_PUBLIC_URL:-http://localhost:9000}
     depends_on:
       mysql:
         condition: service_healthy
