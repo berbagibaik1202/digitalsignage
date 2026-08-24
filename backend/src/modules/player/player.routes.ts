@@ -14,7 +14,7 @@ function createManifestVersion(
   playlistId: number,
   scheduleId: number | null,
   loop: boolean,
-  items: Array<{ id?: number; item_id?: number; media_id?: number; duration_seconds?: number; media_duration?: number; transition?: string | null }>
+  items: Array<{ id?: number; item_id?: number; media_id?: number; duration_seconds?: number; media_duration?: number; transition?: string | null; transition_duration_ms?: number | null }>
 ): number {
   const content = JSON.stringify({
     playlistId,
@@ -25,6 +25,7 @@ function createManifestVersion(
       mediaId: item.media_id,
       durationSeconds: item.duration_seconds || item.media_duration || 10,
       transition: item.transition,
+      transitionDurationMs: item.transition_duration_ms || 700,
     })),
   });
   return crypto.createHash('sha256').update(content).digest().readUInt32BE(0);
@@ -72,6 +73,7 @@ async function getPlaylistItems(playlistId: number, tenantId: number) {
       mime_type: item.mime_type,
       duration_seconds: item.duration_seconds || item.media_duration || 10,
       transition: item.transition,
+      transition_duration_ms: item.transition_duration_ms,
     })),
   };
 }
@@ -322,10 +324,11 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
         mime_type: item.mime_type,
         duration_seconds: item.duration_seconds || item.media_duration || 10,
         transition: item.transition,
+        transition_duration_ms: item.transition_duration_ms,
       }));
 
       res.json({
-        manifest_version: createManifestVersion(defaultPlaylist.id, null, defaultPlaylist.loop_playback, items as Array<{ id?: number; media_id?: number; duration_seconds?: number; media_duration?: number; transition?: string | null }>),
+        manifest_version: createManifestVersion(defaultPlaylist.id, null, defaultPlaylist.loop_playback, items as Array<{ id?: number; media_id?: number; duration_seconds?: number; media_duration?: number; transition?: string | null; transition_duration_ms?: number | null }>),
         playlist_id: defaultPlaylist.id,
         loop: defaultPlaylist.loop_playback,
         items: manifestItems,
@@ -406,10 +409,11 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
       mime_type: item.mime_type,
       duration_seconds: item.duration_seconds || item.media_duration || 10,
       transition: item.transition,
+      transition_duration_ms: item.transition_duration_ms,
     }));
 
     res.json({
-      manifest_version: createManifestVersion(playlistId, schedule.id, playlist?.loop_playback ?? true, items as Array<{ id?: number; media_id?: number; duration_seconds?: number; media_duration?: number; transition?: string | null }>),
+      manifest_version: createManifestVersion(playlistId, schedule.id, playlist?.loop_playback ?? true, items as Array<{ id?: number; media_id?: number; duration_seconds?: number; media_duration?: number; transition?: string | null; transition_duration_ms?: number | null }>),
       schedule_id: schedule.id,
       playlist_id: playlistId,
       loop: playlist?.loop_playback ?? true,

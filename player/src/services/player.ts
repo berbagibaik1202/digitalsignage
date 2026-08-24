@@ -18,6 +18,7 @@ interface ManifestItem {
   mime_type: string;
   duration_seconds: number;
   transition?: string;
+  transition_duration_ms?: number;
 }
 
 interface Manifest {

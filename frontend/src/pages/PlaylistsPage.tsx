@@ -17,6 +17,7 @@ interface PlaylistItem {
   sort_order: number;
   duration_seconds: number | null;
   transition: string;
+  transition_duration_ms: number | null;
   original_name?: string;
   mime_type?: string;
 }
@@ -42,6 +43,10 @@ export default function PlaylistsPage() {
   const [playlistItems, setPlaylistItems] = useState<PlaylistItem[]>([]);
   const [showAddItem, setShowAddItem] = useState(false);
   const [availableMedia, setAvailableMedia] = useState<MediaItem[]>([]);
+  const [pendingMedia, setPendingMedia] = useState<MediaItem | null>(null);
+  const [pendingDuration, setPendingDuration] = useState(10);
+  const [pendingTransition, setPendingTransition] = useState('fade');
+  const [pendingTransitionDuration, setPendingTransitionDuration] = useState(700);
 
   useEffect(() => { loadPlaylists(); }, [page, search]);
 
@@ -121,9 +126,18 @@ export default function PlaylistsPage() {
   async function addItemToPlaylist(mediaId: number) {
     if (!selectedPlaylist) return;
     try {
-      await api.post(`/playlists/${selectedPlaylist.id}/items`, { media_id: mediaId });
+      await api.post(`/playlists/${selectedPlaylist.id}/items`, {
+        media_id: mediaId,
+        duration_seconds: pendingDuration,
+        transition: pendingTransition,
+        transition_duration_ms: pendingTransitionDuration,
+      });
       await loadPlaylistDetail(selectedPlaylist);
       setShowAddItem(false);
+      setPendingMedia(null);
+      setPendingDuration(10);
+      setPendingTransition('fade');
+      setPendingTransitionDuration(700);
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed');
     }
@@ -151,7 +165,14 @@ export default function PlaylistsPage() {
             <p className="text-gray-400 mt-1">{playlistItems.length} item(s)</p>
           </div>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => { loadAvailableMedia(); setShowAddItem(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">
+            <button onClick={() => {
+              loadAvailableMedia();
+              setPendingMedia(null);
+              setPendingDuration(10);
+              setPendingTransition('fade');
+              setPendingTransitionDuration(700);
+              setShowAddItem(true);
+            }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">
               <Plus className="w-4 h-4" /> Add Media
             </button>
           </div>
@@ -176,8 +197,14 @@ export default function PlaylistsPage() {
                   <tr key={item.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
                     <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
                     <td className="px-4 py-3 text-white">{item.original_name || `Media #${item.media_id}`}</td>
-                    <td className="px-4 py-3 text-sm text-gray-400">{item.mime_type || '—'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-400">{item.duration_seconds ? `${item.duration_seconds}s` : '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-400">{item.mime_type || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-400">
+                      <div>{item.duration_seconds ? `${item.duration_seconds}s` : '-'}</div>
+                      <div className="text-xs text-gray-500">
+                        {item.transition || 'none'}
+                        {item.transition_duration_ms ? ` / ${item.transition_duration_ms}ms` : ''}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <button onClick={() => removeItem(item.id)} className="p-1.5 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                     </td>
@@ -191,23 +218,117 @@ export default function PlaylistsPage() {
         {/* Add Item Modal */}
         {showAddItem && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-[500px] max-h-[80vh] overflow-y-auto">
+            <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-[620px] max-h-[85vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">Add Media to Playlist</h3>
-                <button onClick={() => setShowAddItem(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <h3 className="text-lg font-semibold text-white">
+                  {pendingMedia ? 'Configure Playlist Item' : 'Add Media to Playlist'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowAddItem(false);
+                    setPendingMedia(null);
+                    setPendingDuration(10);
+                    setPendingTransition('fade');
+                    setPendingTransitionDuration(700);
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="space-y-2">
-                {availableMedia.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg hover:bg-gray-700">
-                    <div>
-                      <p className="text-white text-sm">{m.original_name}</p>
-                      <p className="text-xs text-gray-400">{m.mime_type}</p>
+              {!pendingMedia ? (
+                <div className="space-y-2">
+                  {availableMedia.map((m) => (
+                    <div key={m.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg hover:bg-gray-700">
+                      <div>
+                        <p className="text-white text-sm">{m.original_name}</p>
+                        <p className="text-xs text-gray-400">{m.mime_type}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setPendingMedia(m);
+                          setPendingDuration(10);
+                          setPendingTransition('fade');
+                          setPendingTransitionDuration(700);
+                        }}
+                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg"
+                      >
+                        Add
+                      </button>
                     </div>
-                    <button onClick={() => addItemToPlaylist(m.id)} className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg">Add</button>
+                  ))}
+                  {availableMedia.length === 0 && <p className="text-gray-500 text-center py-4">No media files available. Upload some first.</p>}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <p className="text-white text-sm font-medium">{pendingMedia.original_name}</p>
+                    <p className="text-xs text-gray-400 mt-1">{pendingMedia.mime_type}</p>
                   </div>
-                ))}
-                {availableMedia.length === 0 && <p className="text-gray-500 text-center py-4">No media files available. Upload some first.</p>}
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Display Duration (seconds)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={pendingDuration}
+                        onChange={(e) => setPendingDuration(Number(e.target.value))}
+                        className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Transition Effect</label>
+                      <select
+                        value={pendingTransition}
+                        onChange={(e) => setPendingTransition(e.target.value)}
+                        className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="fade">Fade</option>
+                        <option value="zoom">Zoom</option>
+                        <option value="slide-left">Slide Left</option>
+                        <option value="slide-right">Slide Right</option>
+                        <option value="slide-up">Slide Up</option>
+                        <option value="slide-down">Slide Down</option>
+                        <option value="none">None</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Transition Duration (ms)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="50"
+                      value={pendingTransitionDuration}
+                      onChange={(e) => setPendingTransitionDuration(Number(e.target.value))}
+                      className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Durasi ini menentukan berapa lama image tampil sebelum pindah ke item berikutnya. Transisi dipakai saat masuk dan keluar.
+                  </p>
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => {
+                        setPendingMedia(null);
+                        setPendingDuration(10);
+                        setPendingTransition('fade');
+                        setPendingTransitionDuration(700);
+                      }}
+                      className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => addItemToPlaylist(pendingMedia.id)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"
+                    >
+                      Save Item
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

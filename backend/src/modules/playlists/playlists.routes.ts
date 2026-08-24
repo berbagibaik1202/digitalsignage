@@ -25,6 +25,7 @@ interface PlaylistItemRow extends RowDataPacket {
   sort_order: number;
   duration_seconds: number | null;
   transition: string;
+  transition_duration_ms: number | null;
   created_at: Date;
   // Joined fields
   original_name?: string;
@@ -200,7 +201,7 @@ router.post('/playlists/:id/items', authenticate, requireRole('super_admin', 'ad
   try {
     const { id } = req.params;
     const tenantId = req.user!.tenantId;
-    const { media_id, duration_seconds, transition } = req.body;
+    const { media_id, duration_seconds, transition, transition_duration_ms } = req.body;
 
     if (!media_id) {
       res.status(400).json({ error: 'media_id is required' });
@@ -232,9 +233,17 @@ router.post('/playlists/:id/items', authenticate, requireRole('super_admin', 'ad
     );
 
     const result = await execute(
-      `INSERT INTO playlist_items (tenant_id, playlist_id, media_id, sort_order, duration_seconds, transition)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [tenantId, id, media_id, (maxOrder as any).next_order, duration_seconds || null, transition || 'none']
+      `INSERT INTO playlist_items (tenant_id, playlist_id, media_id, sort_order, duration_seconds, transition, transition_duration_ms)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        tenantId,
+        id,
+        media_id,
+        (maxOrder as any).next_order,
+        duration_seconds || null,
+        transition || 'none',
+        transition_duration_ms || null,
+      ]
     );
 
     const item = await queryOne(

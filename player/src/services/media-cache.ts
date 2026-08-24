@@ -8,6 +8,7 @@ export interface CachedManifestItem {
   mime_type: string;
   duration_seconds: number;
   transition?: string;
+  transition_duration_ms?: number;
 }
 
 export interface CachedManifest {
@@ -50,13 +51,19 @@ export function getCachedManifest(): CachedManifest | null {
 }
 
 export async function cacheManifest(manifest: CachedManifest, token: string | null, getMediaUrl: (url: string) => string): Promise<void> {
-  const cache = await getMediaCache();
-  if (!cache) throw new Error('Offline media cache is unavailable');
-
   const mediaItems = [
     ...manifest.items,
     ...(manifest.layout?.zones.flatMap((zone) => zone.items) || []),
   ];
+
+  // A layout containing only CLOCK/TEXT has no files to cache.
+  if (mediaItems.length === 0) {
+    localStorage.setItem(MANIFEST_KEY, JSON.stringify(manifest));
+    return;
+  }
+
+  const cache = await getMediaCache();
+  if (!cache) throw new Error('Offline media cache is unavailable');
 
   for (const item of mediaItems) {
     const mediaUrl = getMediaUrl(item.media_url);
