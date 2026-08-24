@@ -197,7 +197,7 @@ Jika ada perubahan kode, jalankan:
 cd /opt/digitalsignage
 git pull origin main
 docker compose down
-docker compose build --no-cache backend
+docker compose build --no-cache backend frontend
 docker compose up -d
 docker compose exec backend npm run migrate
 ```
