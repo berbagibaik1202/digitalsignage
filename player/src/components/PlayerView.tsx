@@ -74,7 +74,11 @@ export default function PlayerView({ onError }: PlayerViewProps) {
       started_at: new Date().toISOString(),
     });
 
-    // Set timer for next item
+    if (item.mime_type.startsWith('video/') || item.mime_type.startsWith('audio/')) {
+      return;
+    }
+
+    // Images and unsupported media advance using the configured playlist duration.
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       // Report END

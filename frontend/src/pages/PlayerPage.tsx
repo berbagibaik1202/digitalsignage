@@ -200,6 +200,10 @@ export default function PlayerPage() {
 
     reportPlayback({ playlist_id: manifest.playlist_id, media_id: item.item_id, action: 'START', started_at: new Date().toISOString() });
 
+    if (item.mime_type.startsWith('video/') || item.mime_type.startsWith('audio/')) {
+      return;
+    }
+
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       reportPlayback({ playlist_id: manifest.playlist_id, media_id: item.item_id, action: 'END', ended_at: new Date().toISOString(), duration_ms: Date.now() - startTimeRef.current });
