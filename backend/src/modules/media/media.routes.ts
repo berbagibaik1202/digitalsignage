@@ -245,6 +245,51 @@ router.get('/media/file/:id', authenticate, requireRole('super_admin', 'admin', 
   }
 });
 
+// ─── POST /api/v1/media/:id/reprocess ────────────────────────
+router.post('/media/:id/reprocess', authenticate, requireRole('super_admin', 'admin', 'editor'), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+    const media = await queryOne<MediaRow>(
+      'SELECT * FROM media WHERE id = ? AND tenant_id = ?',
+      [id, tenantId]
+    );
+
+    if (!media) {
+      res.status(404).json({ error: 'Media not found' });
+      return;
+    }
+
+    if (!isProcessableImage(media.mime_type) && !isVideo(media.mime_type)) {
+      res.status(400).json({ error: 'Media type does not support thumbnail processing' });
+      return;
+    }
+
+    const queue = getMediaQueue();
+    await queue.add('process-media', {
+      tenantId,
+      mediaId: media.id,
+      storageKey: media.storage_key,
+      mimeType: media.mime_type,
+      originalName: media.original_name,
+    }, {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 2000 },
+      removeOnComplete: true,
+      removeOnFail: false,
+    });
+
+    await execute(
+      "UPDATE media SET status = 'PROCESSING' WHERE id = ? AND tenant_id = ?",
+      [media.id, tenantId]
+    );
+    res.json({ message: 'Media queued for processing' });
+  } catch (err) {
+    console.error('Reprocess media error:', err);
+    res.status(500).json({ error: 'Unable to queue media processing' });
+  }
+});
+
 // ─── DELETE /api/v1/media/:id ───────────────────────────────────
 router.delete('/media/:id', authenticate, requireRole('super_admin', 'admin', 'editor'), async (req: Request, res: Response) => {
   try {

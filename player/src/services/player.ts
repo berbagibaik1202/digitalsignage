@@ -254,10 +254,12 @@ export function clearAuth() {
 }
 
 // ─── Get Media URL ───────────────────────────────────────────
-export function getMediaUrl(path: string): string {
-  // path is like "/api/v1/media/file/123"
-  // We need to construct the full URL
-  return `${getApiBase()}${path}`;
+export function getMediaUrl(mediaUrl: string): string {
+  if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
+    return mediaUrl;
+  }
+
+  return `${getApiBase()}${mediaUrl}`;
 }
 
 export { getDeviceUUID, getApiBase, setApiBase };

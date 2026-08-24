@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Image, Upload, Search, Trash2, Eye, FileVideo, FileAudio, File, X, Loader } from 'lucide-react';
+import { Image, Upload, Search, Trash2, Eye, FileVideo, FileAudio, File, X, Loader, RefreshCw } from 'lucide-react';
 import api from '../lib/api';
 
 interface MediaItem {
@@ -75,6 +75,15 @@ export default function MediaPage() {
     }
   }
 
+  async function handleReprocess(id: number) {
+    try {
+      await api.post(`/media/${id}/reprocess`);
+      loadMedia();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to regenerate thumbnail');
+    }
+  }
+
   function formatFileSize(bytes: number) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -127,9 +136,11 @@ export default function MediaPage() {
       return (
         <video
           src={url}
+          poster={item.thumbnail_url || undefined}
           className="w-full h-full object-cover"
           muted
           preload="metadata"
+          controls={size === 'full'}
           onError={(e) => {
             (e.target as HTMLVideoElement).style.display = 'none';
           }}
@@ -202,6 +213,11 @@ export default function MediaPage() {
                   <button onClick={() => setPreviewItem(item)} className="p-2 bg-gray-800 rounded-lg text-white hover:bg-gray-700">
                     <Eye className="w-4 h-4" />
                   </button>
+                  {(item.mime_type.startsWith('image/') || item.mime_type.startsWith('video/')) && (
+                    <button onClick={() => handleReprocess(item.id)} className="p-2 bg-gray-800 rounded-lg text-white hover:bg-gray-700" title="Regenerate thumbnail">
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  )}
                   <button onClick={() => handleDelete(item.id)} className="p-2 bg-gray-800 rounded-lg text-red-400 hover:bg-gray-700">
                     <Trash2 className="w-4 h-4" />
                   </button>

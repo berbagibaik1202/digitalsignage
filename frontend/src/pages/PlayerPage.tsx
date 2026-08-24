@@ -2,6 +2,14 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 const API_BASE = window.location.origin;
 
+function getMediaUrl(mediaUrl: string): string {
+  if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) {
+    return mediaUrl;
+  }
+
+  return `${API_BASE}${mediaUrl}`;
+}
+
 interface ManifestItem {
   item_id: number;
   media_url: string;
@@ -293,7 +301,7 @@ export default function PlayerPage() {
       {currentItem.mime_type.startsWith('image/') ? (
         <img
           key={currentItem.item_id}
-          src={`${API_BASE}${currentItem.media_url}`}
+          src={getMediaUrl(currentItem.media_url)}
           alt=""
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -301,7 +309,7 @@ export default function PlayerPage() {
       ) : currentItem.mime_type.startsWith('video/') ? (
         <video
           key={currentItem.item_id}
-          src={`${API_BASE}${currentItem.media_url}`}
+          src={getMediaUrl(currentItem.media_url)}
           autoPlay
           muted
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -315,7 +323,7 @@ export default function PlayerPage() {
         <>
           <audio
             key={currentItem.item_id}
-            src={`${API_BASE}${currentItem.media_url}`}
+            src={getMediaUrl(currentItem.media_url)}
             autoPlay
             onEnded={() => {
               if (currentIndex < manifest.items.length - 1) setCurrentIndex(currentIndex + 1);
@@ -329,7 +337,7 @@ export default function PlayerPage() {
       ) : (
         <img
           key={currentItem.item_id}
-          src={`${API_BASE}${currentItem.media_url}`}
+          src={getMediaUrl(currentItem.media_url)}
           alt=""
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />

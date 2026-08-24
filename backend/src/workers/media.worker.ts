@@ -2,7 +2,7 @@ import { Worker, Job } from 'bullmq';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import { getFileStream, uploadFile, getPresignedUrl } from '../services/storage';
-import { processImage, isProcessableImage, isVideo } from '../services/media-processor';
+import { processImage, processVideoThumbnail, isProcessableImage, isVideo } from '../services/media-processor';
 import { execute } from '../services/query';
 
 interface MediaJobData {
@@ -73,9 +73,14 @@ const mediaWorker = new Worker(
           logger.info(`✅ Thumbnail generated for media ${mediaId}: ${thumbnailKey}`);
         }
       } else if (isVideo(mimeType)) {
-        // Future: FFmpeg processing for video thumbnails
-        // For now, just update dimensions from metadata
-        logger.info(`🎬 Video detected: ${originalName} (FFmpeg processing not yet implemented)`);
+        const thumbnail = await processVideoThumbnail(buffer);
+        const thumbnailKey = storageKey.replace(/\.[^.]+$/, '_thumb.jpg');
+        await uploadFile(thumbnailKey, thumbnail, 'image/jpeg');
+        await execute(
+          'UPDATE media SET thumbnail_key = ? WHERE id = ? AND tenant_id = ?',
+          [thumbnailKey, mediaId, tenantId]
+        );
+        logger.info(`✅ Video thumbnail generated for media ${mediaId}: ${thumbnailKey}`);
       }
 
       // Update status to READY

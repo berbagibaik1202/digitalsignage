@@ -6,6 +6,7 @@ import { RowDataPacket } from 'mysql2';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config';
+import { getPresignedUrl } from '../../services/storage';
 
 const router = Router();
 
@@ -248,17 +249,19 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
         [defaultPlaylist.id, tenantId]
       );
 
+      const manifestItems = await Promise.all(items.map(async (item) => ({
+        item_id: item.id,
+        media_url: await getPresignedUrl(item.storage_key),
+        mime_type: item.mime_type,
+        duration_seconds: item.duration_seconds || item.media_duration || 10,
+        transition: item.transition,
+      })));
+
       res.json({
         manifest_version: Date.now(),
         playlist_id: defaultPlaylist.id,
         loop: defaultPlaylist.loop_playback,
-        items: items.map(i => ({
-          item_id: i.id,
-          media_url: `/api/v1/media/file/${i.media_id}`,
-          mime_type: i.mime_type,
-          duration_seconds: i.duration_seconds || i.media_duration || 10,
-          transition: i.transition,
-        })),
+        items: manifestItems,
       });
       return;
     }
@@ -285,18 +288,20 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
       [playlistId, tenantId]
     );
 
+    const manifestItems = await Promise.all(items.map(async (item) => ({
+      item_id: item.id,
+      media_url: await getPresignedUrl(item.storage_key),
+      mime_type: item.mime_type,
+      duration_seconds: item.duration_seconds || item.media_duration || 10,
+      transition: item.transition,
+    })));
+
     res.json({
       manifest_version: Date.now(),
       schedule_id: schedule.id,
       playlist_id: playlistId,
       loop: playlist?.loop_playback ?? true,
-      items: items.map(i => ({
-        item_id: i.id,
-        media_url: `/api/v1/media/file/${i.media_id}`,
-        mime_type: i.mime_type,
-        duration_seconds: i.duration_seconds || i.media_duration || 10,
-        transition: i.transition,
-      })),
+      items: manifestItems,
     });
   } catch (err) {
     console.error('Player manifest error:', err);
