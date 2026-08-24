@@ -228,9 +228,23 @@ export default function LayoutView({ layout }: { layout: Layout }) {
           );
         }
         if (zone.zone_type === 'TEXT') {
+          const text = String(zone.config.text || zone.name);
+          const backgroundColor = typeof zone.config.background_color === 'string' ? zone.config.background_color : '#000000';
+          const fontFamily = typeof zone.config.font_family === 'string' ? zone.config.font_family : 'ui-sans-serif, system-ui, sans-serif';
+          const fontSize = Number(zone.config.font_size) || 56;
+
           return (
             <div key={zone.id} className="absolute overflow-hidden" style={style}>
-              <TextMarquee text={String(zone.config.text || zone.name)} />
+              <TextMarquee
+                text={text}
+                style={{
+                  backgroundColor,
+                  color: '#ffffff',
+                  fontFamily,
+                  fontSize: `${fontSize}px`,
+                  fontWeight: 700,
+                }}
+              />
             </div>
           );
         }

@@ -45,10 +45,15 @@ const CLOCK_FONT_OPTIONS = [
   { value: 'Montserrat, sans-serif', label: 'Montserrat' },
 ];
 
+const TEXT_FONT_OPTIONS = CLOCK_FONT_OPTIONS;
+
 const DEFAULT_CLOCK_FORMAT = 'HH:MM:SS';
 const DEFAULT_CLOCK_FONT_FAMILY = 'ui-sans-serif, system-ui, sans-serif';
 const DEFAULT_CLOCK_FONT_SIZE = 72;
 const DEFAULT_CLOCK_FONT_WEIGHT = 700;
+const DEFAULT_TEXT_FONT_FAMILY = 'ui-sans-serif, system-ui, sans-serif';
+const DEFAULT_TEXT_FONT_SIZE = 56;
+const DEFAULT_TEXT_BACKGROUND_COLOR = '#000000';
 
 function readZoneConfig(config: unknown): Record<string, unknown> {
   if (typeof config === 'string') {
@@ -94,6 +99,9 @@ export default function LayoutsPage() {
   const [zoneZ, setZoneZ] = useState(0);
   const [zonePlaylistId, setZonePlaylistId] = useState('');
   const [zoneTextContent, setZoneTextContent] = useState('');
+  const [zoneTextBackgroundColor, setZoneTextBackgroundColor] = useState(DEFAULT_TEXT_BACKGROUND_COLOR);
+  const [zoneTextFontFamily, setZoneTextFontFamily] = useState(DEFAULT_TEXT_FONT_FAMILY);
+  const [zoneTextFontSize, setZoneTextFontSize] = useState(DEFAULT_TEXT_FONT_SIZE);
   const [zoneClockFormat, setZoneClockFormat] = useState(DEFAULT_CLOCK_FORMAT);
   const [zoneClockFontFamily, setZoneClockFontFamily] = useState(DEFAULT_CLOCK_FONT_FAMILY);
   const [zoneClockFontSize, setZoneClockFontSize] = useState(DEFAULT_CLOCK_FONT_SIZE);
@@ -161,7 +169,12 @@ export default function LayoutsPage() {
       const config = normalizedZoneType === 'MEDIA'
         ? (zonePlaylistId ? { playlist_id: Number(zonePlaylistId) } : {})
         : normalizedZoneType === 'TEXT'
-          ? { text: zoneTextContent.trim() || zoneName.trim() }
+          ? {
+              text: zoneTextContent.trim() || zoneName.trim(),
+              background_color: zoneTextBackgroundColor,
+              font_family: zoneTextFontFamily,
+              font_size: zoneTextFontSize,
+            }
         : normalizedZoneType === 'CLOCK'
           ? {
               format: zoneClockFormat,
@@ -218,6 +231,9 @@ export default function LayoutsPage() {
     setZoneZ(zone.z_index);
     setZonePlaylistId(config.playlist_id ? String(config.playlist_id) : '');
     setZoneTextContent(typeof config.text === 'string' ? config.text : zone.name || '');
+    setZoneTextBackgroundColor(typeof config.background_color === 'string' ? config.background_color : DEFAULT_TEXT_BACKGROUND_COLOR);
+    setZoneTextFontFamily(typeof config.font_family === 'string' ? config.font_family : DEFAULT_TEXT_FONT_FAMILY);
+    setZoneTextFontSize(Number(config.font_size) || DEFAULT_TEXT_FONT_SIZE);
     setZoneClockFormat(typeof config.format === 'string' ? config.format : DEFAULT_CLOCK_FORMAT);
     setZoneClockFontFamily(typeof config.font_family === 'string' ? config.font_family : DEFAULT_CLOCK_FONT_FAMILY);
     setZoneClockFontSize(Number(config.font_size) || DEFAULT_CLOCK_FONT_SIZE);
@@ -246,6 +262,9 @@ export default function LayoutsPage() {
     setZoneZ(0);
     setZonePlaylistId('');
     setZoneTextContent('');
+    setZoneTextBackgroundColor(DEFAULT_TEXT_BACKGROUND_COLOR);
+    setZoneTextFontFamily(DEFAULT_TEXT_FONT_FAMILY);
+    setZoneTextFontSize(DEFAULT_TEXT_FONT_SIZE);
     setZoneClockFormat(DEFAULT_CLOCK_FORMAT);
     setZoneClockFontFamily(DEFAULT_CLOCK_FONT_FAMILY);
     setZoneClockFontSize(DEFAULT_CLOCK_FONT_SIZE);
@@ -418,6 +437,9 @@ export default function LayoutsPage() {
                     }
                     if (nextType === 'TEXT' && !zoneTextContent.trim()) {
                       setZoneTextContent(zoneName.trim());
+                      setZoneTextBackgroundColor(DEFAULT_TEXT_BACKGROUND_COLOR);
+                      setZoneTextFontFamily(DEFAULT_TEXT_FONT_FAMILY);
+                      setZoneTextFontSize(DEFAULT_TEXT_FONT_SIZE);
                     }
                     if (nextType === 'CLOCK') {
                       setZoneClockFormat(DEFAULT_CLOCK_FORMAT);
@@ -442,16 +464,64 @@ export default function LayoutsPage() {
               )}
 
               {zoneType === 'TEXT' && (
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">Text Content</label>
-                  <textarea
-                    value={zoneTextContent}
-                    onChange={e => setZoneTextContent(e.target.value)}
-                    rows={4}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y"
-                    placeholder="Tulis teks berjalan di sini"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">Teks akan berjalan ke kiri sebagai running text.</p>
+                <div className="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-white">Text Settings</h4>
+                    <p className="text-xs text-gray-500">Teks berjalan ke kiri, dengan background dan font yang bisa diatur.</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-full">
+                      <label className="block text-sm text-gray-400 mb-1">Text Content</label>
+                      <textarea
+                        value={zoneTextContent}
+                        onChange={e => setZoneTextContent(e.target.value)}
+                        rows={4}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none resize-y"
+                        placeholder="Tulis teks berjalan di sini"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Background Color</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={zoneTextBackgroundColor}
+                          onChange={e => setZoneTextBackgroundColor(e.target.value)}
+                          className="w-10 h-10 rounded border border-gray-700 bg-transparent"
+                        />
+                        <input
+                          type="text"
+                          value={zoneTextBackgroundColor}
+                          onChange={e => setZoneTextBackgroundColor(e.target.value)}
+                          className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Font Size (px)</label>
+                      <input
+                        type="number"
+                        min="12"
+                        max="240"
+                        value={zoneTextFontSize}
+                        onChange={(e) => setZoneTextFontSize(Number(e.target.value))}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      />
+                    </div>
+                    <div className="col-span-full">
+                      <label className="block text-sm text-gray-400 mb-1">Font Family</label>
+                      <select
+                        value={zoneTextFontFamily}
+                        onChange={(e) => setZoneTextFontFamily(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      >
+                        {TEXT_FONT_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               )}
 
