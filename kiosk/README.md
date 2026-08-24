@@ -44,21 +44,15 @@ google-chrome --kiosk https://display.rizki-tech.com
 
 ### Ganti URL
 
-Edit file `kiosk.bat` atau `kiosk.sh`, ubah baris:
-
-```
-PLATFORM_URL=https://display.rizki-tech.com
-```
-
-Atau set environment variable:
+Set environment variable `KIOSK_URL` sebelum menjalankan script:
 
 ```bash
 # Windows
-set PLATFORM_URL=https://your-domain.com
+set KIOSK_URL=https://your-domain.com/player
 kiosk.bat
 
 # Linux
-PLATFORM_URL=https://your-domain.com ./kiosk.sh
+KIOSK_URL=https://your-domain.com/player ./kiosk.sh
 ```
 
 ### Auto-Start saat Boot

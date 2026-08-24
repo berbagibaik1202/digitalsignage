@@ -1,12 +1,10 @@
 const { app, BrowserWindow, screen } = require('electron');
-const path = require('path');
-const fs = require('fs');
 
 // ============================================================
 // Digital Signage Player (Electron)
 // ============================================================
 
-const WEB_URL = 'https://display.rizki-tech.com/player';
+const WEB_URL = process.env.KIOSK_URL || 'https://display.rizki-tech.com/player';
 let mainWindow = null;
 
 function createWindow() {
@@ -27,26 +25,16 @@ function createWindow() {
     },
   });
 
-  // Try local build first, then fallback to web
-  const localPath = path.join(__dirname, '..', 'player', 'dist', 'index.html');
-
-  if (fs.existsSync(localPath)) {
-    console.log('[Player] Loading from local build...');
-    mainWindow.loadFile(localPath);
-  } else {
-    console.log('[Player] Loading from web:', WEB_URL);
-    mainWindow.loadURL(WEB_URL);
-  }
+  console.log('[Player] Loading from web:', WEB_URL);
+  mainWindow.loadURL(WEB_URL);
 
   // Handle load errors - retry
-  mainWindow.webContents.on('did-fail-load', (event, code, desc) => {
+  mainWindow.webContents.on('did-fail-load', (_event, code, desc) => {
+    if (code === -3) return;
+
     console.log(`[Player] Load failed: ${code} - ${desc}, retrying...`);
     setTimeout(() => {
-      if (fs.existsSync(localPath)) {
-        mainWindow.loadFile(localPath);
-      } else {
-        mainWindow.loadURL(WEB_URL);
-      }
+      mainWindow?.loadURL(WEB_URL);
     }, 3000);
   });
 

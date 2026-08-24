@@ -13,6 +13,8 @@ echo  URL: https://display.rizki-tech.com/player
 echo ==========================================
 echo.
 
+pushd "%~dp0"
+
 REM --- Cek Node.js ---
 where node >nul 2>&1
 if errorlevel 1 (
@@ -38,3 +40,4 @@ echo.
 
 REM --- Jalankan Electron ---
 npx electron .
+popd
