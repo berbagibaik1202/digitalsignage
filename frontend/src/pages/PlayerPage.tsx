@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import WebPlayerLayoutView, { type WebPlayerLayout } from '../components/WebPlayerLayoutView';
 
 const API_BASE = window.location.origin;
 
@@ -23,6 +24,7 @@ interface Manifest {
   playlist_id?: number;
   loop: boolean;
   items: ManifestItem[];
+  layout?: WebPlayerLayout;
 }
 
 async function getPlayableMediaUrl(mediaUrl: string): Promise<string> {
@@ -182,7 +184,7 @@ export default function PlayerPage() {
   const loadManifest = useCallback(async () => {
     try {
       const m = await getManifest();
-      if (m && m.items.length > 0) {
+      if (m && (m.items.length > 0 || m.layout)) {
         setManifest(m);
         setCurrentIndex(0);
         setPhase('playing');
@@ -205,7 +207,7 @@ export default function PlayerPage() {
 
   // ─── Playback timer ────────────────────────────────────────
   useEffect(() => {
-    if (!manifest || manifest.items.length === 0 || phase !== 'playing') return;
+    if (!manifest || manifest.items.length === 0 || manifest.layout || phase !== 'playing') return;
 
     const item = manifest.items[currentIndex];
     startTimeRef.current = Date.now();
@@ -231,7 +233,7 @@ export default function PlayerPage() {
   }, [currentIndex, manifest, phase]);
 
   useEffect(() => {
-    if (!manifest || manifest.items.length === 0) return;
+    if (!manifest || manifest.items.length === 0 || manifest.layout) return;
 
     let objectUrl: string | null = null;
     getPlayableMediaUrl(manifest.items[currentIndex].media_url)
@@ -313,7 +315,7 @@ export default function PlayerPage() {
   }
 
   // No content screen
-  if (phase === 'no-content' || !manifest || manifest.items.length === 0) {
+  if (phase === 'no-content' || !manifest || (manifest.items.length === 0 && !manifest.layout)) {
     return (
       <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
@@ -327,6 +329,10 @@ export default function PlayerPage() {
   }
 
   // ─── PLAYING ───────────────────────────────────────────────
+  if (manifest.layout) {
+    return <WebPlayerLayoutView layout={manifest.layout} loadMedia={getPlayableMediaUrl} />;
+  }
+
   const currentItem = manifest.items[currentIndex];
   const currentMediaUrl = mediaSource || getMediaUrl(currentItem.media_url);
 
