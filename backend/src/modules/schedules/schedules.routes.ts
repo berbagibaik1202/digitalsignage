@@ -19,8 +19,10 @@ function scheduleErrorMessage(error: unknown): string {
     const code = String(error.code);
     if (code === 'ER_DATA_TOO_LONG') return 'Schedule value is too long';
     if (code === 'ER_TRUNCATED_WRONG_VALUE') return 'Invalid schedule date or time';
+    if (code === 'ER_BAD_NULL_ERROR') return 'End date and schedule times must allow empty values; run the latest database migration';
     if (code === 'ER_NO_REFERENCED_ROW_2') return 'Selected playlist, layout, device, or group no longer exists';
   }
+  if (error instanceof Error) return `Unable to save schedule: ${error.message}`;
   return 'Unable to save schedule';
 }
 
