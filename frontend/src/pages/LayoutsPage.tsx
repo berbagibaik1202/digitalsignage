@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LayoutGrid, Plus, Trash2, Search, Edit, X, GripVertical } from 'lucide-react';
 import api from '../lib/api';
+import LayoutCanvasEditor from '../components/LayoutCanvasEditor';
 
 interface Layout {
   id: number;
@@ -117,8 +118,9 @@ export default function LayoutsPage() {
   async function handleSaveZone() {
     if (!selectedLayout) return;
     try {
+      const normalizedZoneType = zoneType === 'HTML' ? 'WEB' : zoneType;
       const data = {
-        name: zoneName, zone_type: zoneType, x: zoneX, y: zoneY, width: zoneW, height: zoneH, z_index: zoneZ,
+        name: zoneName, zone_type: normalizedZoneType, x: zoneX, y: zoneY, width: zoneW, height: zoneH, z_index: zoneZ,
         config: zoneType === 'MEDIA' && zonePlaylistId ? { playlist_id: Number(zonePlaylistId) } : {},
       };
       if (editingZone) {
@@ -156,7 +158,7 @@ export default function LayoutsPage() {
   function openEditZone(zone: LayoutZone) {
     setEditingZone(zone);
     setZoneName(zone.name);
-    setZoneType(zone.zone_type);
+    setZoneType(zone.zone_type === 'HTML' ? 'WEB' : zone.zone_type);
     setZoneX(zone.x);
     setZoneY(zone.y);
     setZoneW(zone.width);
@@ -167,9 +169,28 @@ export default function LayoutsPage() {
   }
 
   function resetForm() { setFormName(''); setFormDesc(''); setFormWidth(1920); setFormHeight(1080); setFormBgColor('#000000'); }
-  function resetZoneForm() { setZoneName(''); setZoneType('MEDIA'); setZoneX(0); setZoneY(0); setZoneW(1920); setZoneH(1080); setZoneZ(0); setZonePlaylistId(''); }
 
-  const zoneTypes = ['MEDIA', 'TEXT', 'CLOCK', 'WEATHER', 'RSS', 'HTML'];
+  function resetZoneForm(layout = selectedLayout) {
+    const defaults = layout
+      ? {
+          x: Math.max(0, Math.round((layout.width - Math.max(240, Math.round(layout.width * 0.35))) / 2)),
+          y: Math.max(0, Math.round((layout.height - Math.max(160, Math.round(layout.height * 0.25))) / 2)),
+          width: Math.max(240, Math.round(layout.width * 0.35)),
+          height: Math.max(160, Math.round(layout.height * 0.25)),
+        }
+      : { x: 0, y: 0, width: 640, height: 360 };
+
+    setZoneName('');
+    setZoneType('MEDIA');
+    setZoneX(defaults.x);
+    setZoneY(defaults.y);
+    setZoneW(defaults.width);
+    setZoneH(defaults.height);
+    setZoneZ(0);
+    setZonePlaylistId('');
+  }
+
+  const zoneTypes = ['MEDIA', 'TEXT', 'CLOCK', 'WEATHER', 'RSS', 'WEB'];
 
   return (
     <div className="space-y-6">
@@ -229,12 +250,12 @@ export default function LayoutsPage() {
       {/* Zones Panel (shown when a layout is selected) */}
       {selectedLayout && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold text-white">Zones — {selectedLayout.name}</h2>
-              <span className="text-xs text-gray-500">({zones.length} zones)</span>
-            </div>
-            <div className="flex gap-2">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-white">Zones — {selectedLayout.name}</h2>
+            <span className="text-xs text-gray-500">({zones.length} zones)</span>
+          </div>
+          <div className="flex gap-2">
               <button onClick={() => { resetZoneForm(); setEditingZone(null); setShowZoneModal(true); }} className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-xs">
                 <Plus className="w-3 h-3" /> Add Zone
               </button>
@@ -316,9 +337,9 @@ export default function LayoutsPage() {
       {/* Zone Modal */}
       {showZoneModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-md">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-white mb-4">{editingZone ? 'Edit Zone' : 'New Zone'}</h3>
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Name *</label>
                 <input type="text" value={zoneName} onChange={e => setZoneName(e.target.value)} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
@@ -338,11 +359,53 @@ export default function LayoutsPage() {
                   </select>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm text-gray-400 mb-1">X</label><input type="number" value={zoneX} onChange={e => setZoneX(Number(e.target.value))} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" /></div>
-                <div><label className="block text-sm text-gray-400 mb-1">Y</label><input type="number" value={zoneY} onChange={e => setZoneY(Number(e.target.value))} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" /></div>
-                <div><label className="block text-sm text-gray-400 mb-1">Width</label><input type="number" value={zoneW} onChange={e => setZoneW(Number(e.target.value))} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" /></div>
-                <div><label className="block text-sm text-gray-400 mb-1">Height</label><input type="number" value={zoneH} onChange={e => setZoneH(Number(e.target.value))} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" /></div>
+
+              {selectedLayout && (
+                <LayoutCanvasEditor
+                  layoutWidth={selectedLayout.width}
+                  layoutHeight={selectedLayout.height}
+                  backgroundColor={selectedLayout.background_color}
+                  value={{ x: zoneX, y: zoneY, width: zoneW, height: zoneH }}
+                  onChange={({ x, y, width, height }) => {
+                    setZoneX(Math.round(x));
+                    setZoneY(Math.round(y));
+                    setZoneW(Math.round(width));
+                    setZoneH(Math.round(height));
+                  }}
+                  backgroundZones={zones
+                    .filter(zone => !editingZone || zone.id !== editingZone.id)
+                    .map(zone => ({
+                      id: zone.id,
+                      name: zone.name,
+                      zone_type: zone.zone_type,
+                      x: zone.x,
+                      y: zone.y,
+                      width: zone.width,
+                      height: zone.height,
+                      z_index: zone.z_index,
+                    }))}
+                  label={zoneName || 'Zone'}
+                  minWidth={80}
+                  minHeight={60}
+                  snap={10}
+                />
+              )}
+
+              <div className="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium text-white">Precise values</h4>
+                    <p className="text-xs text-gray-500">Use these only for exact adjustments.</p>
+                  </div>
+                  <span className="text-xs text-gray-500">Drag-drop is the primary editor</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className="block text-sm text-gray-400 mb-1">X</label><input type="number" value={zoneX} onChange={e => setZoneX(Number(e.target.value))} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" /></div>
+                  <div><label className="block text-sm text-gray-400 mb-1">Y</label><input type="number" value={zoneY} onChange={e => setZoneY(Number(e.target.value))} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" /></div>
+                  <div><label className="block text-sm text-gray-400 mb-1">Width</label><input type="number" value={zoneW} onChange={e => setZoneW(Number(e.target.value))} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" /></div>
+                  <div><label className="block text-sm text-gray-400 mb-1">Height</label><input type="number" value={zoneH} onChange={e => setZoneH(Number(e.target.value))} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" /></div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Z-Index</label>
