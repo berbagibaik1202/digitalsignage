@@ -114,6 +114,10 @@ export default function SchedulesPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.start_date) {
+      alert('Start Date is required');
+      return;
+    }
     try {
       const payload = {
         ...form,

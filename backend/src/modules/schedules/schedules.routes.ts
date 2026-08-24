@@ -10,6 +10,20 @@ function optionalValue(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value : null;
 }
 
+function isDate(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function scheduleErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = String(error.code);
+    if (code === 'ER_DATA_TOO_LONG') return 'Schedule value is too long';
+    if (code === 'ER_TRUNCATED_WRONG_VALUE') return 'Invalid schedule date or time';
+    if (code === 'ER_NO_REFERENCED_ROW_2') return 'Selected playlist, layout, device, or group no longer exists';
+  }
+  return 'Unable to save schedule';
+}
+
 interface ScheduleRow extends RowDataPacket {
   id: number;
   tenant_id: number;
@@ -128,8 +142,8 @@ router.post('/schedules', authenticate, requireRole('super_admin', 'admin', 'edi
     } = req.body;
     const tenantId = req.user!.tenantId;
 
-    if (!name || !start_date) {
-      res.status(400).json({ error: 'name and start_date are required' });
+    if (!name || !isDate(start_date)) {
+      res.status(400).json({ error: 'name and a valid start_date are required' });
       return;
     }
 
@@ -182,7 +196,7 @@ router.post('/schedules', authenticate, requireRole('super_admin', 'admin', 'edi
     res.status(201).json({ schedule });
   } catch (err) {
     console.error('Create schedule error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(400).json({ error: scheduleErrorMessage(err) });
   }
 });
 
@@ -250,7 +264,7 @@ router.put('/schedules/:id', authenticate, requireRole('super_admin', 'admin', '
     res.json({ schedule });
   } catch (err) {
     console.error('Update schedule error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(400).json({ error: scheduleErrorMessage(err) });
   }
 });
 
