@@ -1,6 +1,7 @@
 // Player Service — handles all communication with Digital Signage backend
 
 const DEFAULT_API_BASE = 'https://display.rizki-tech.com';
+const REQUEST_TIMEOUT_MS = 10_000;
 
 interface DeviceInfo {
   device_uuid: string;
@@ -83,11 +84,20 @@ async function apiRequest(method: string, path: string, body?: unknown, useSessi
     }
   }
 
-  const res = await fetch(`${getApiBase()}/api/v1${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let res: Response;
+
+  try {
+    res = await fetch(`${getApiBase()}/api/v1${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (res.status === 401 && useSession && allowReauthentication && await authenticateDevice()) {
     return apiRequest(method, path, body, true, false);

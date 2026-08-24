@@ -26,10 +26,9 @@ export default function App() {
   useEffect(() => {
     if (!isRegistered()) return;
 
-    setPhase('authenticating');
-    authenticateDevice().then(() => {
-      setPhase('playing');
-    });
+    // Enter playback immediately so PlayerView can restore cached content offline.
+    setPhase('playing');
+    void authenticateDevice();
   }, []);
 
   // Handle setup completion
@@ -64,11 +63,8 @@ export default function App() {
   const handleRetry = useCallback(() => {
     setError(null);
     if (isRegistered()) {
-      setPhase('authenticating');
-      authenticateDevice().then((ok) => {
-        if (ok) setPhase('playing');
-        else setPhase('setup');
-      });
+      setPhase('playing');
+      void authenticateDevice();
     } else {
       setPhase('setup');
     }
