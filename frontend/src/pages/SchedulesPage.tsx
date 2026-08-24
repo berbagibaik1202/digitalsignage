@@ -24,7 +24,7 @@ interface Layout { id: number; name: string; }
 interface Device { id: number; name: string; status: string; }
 interface DeviceGroup { id: number; name: string; }
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAYS = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
 
 export default function SchedulesPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -38,8 +38,8 @@ export default function SchedulesPage() {
   // Related data
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [layouts, setLayouts] = useState<Layout[]>([]);
-  const [_devices, setDevices] = useState<Device[]>([]);
-  const [_deviceGroups, setDeviceGroups] = useState<DeviceGroup[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [deviceGroups, setDeviceGroups] = useState<DeviceGroup[]>([]);
 
   const [form, setForm] = useState({
     name: '', description: '', playlist_id: '', layout_id: '',
@@ -94,7 +94,7 @@ export default function SchedulesPage() {
     setShowModal(true);
   }
 
-  function openEdit(s: Schedule) {
+  async function openEdit(s: Schedule) {
     setEditingSchedule(s);
     setForm({
       name: s.name, description: s.description || '',
@@ -106,6 +106,10 @@ export default function SchedulesPage() {
       priority: s.priority, is_active: s.is_active, targets: [],
     });
     setShowModal(true);
+    try {
+      const res = await api.get(`/schedules/${s.id}`);
+      setForm((previous) => ({ ...previous, targets: res.data.targets || [] }));
+    } catch (err) { console.error('Failed to load schedule targets:', err); }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -146,6 +150,18 @@ export default function SchedulesPage() {
         ? prev.days_of_week.filter((d) => d !== day)
         : [...prev.days_of_week, day];
       return { ...prev, days_of_week: days };
+    });
+  }
+
+  function toggleTarget(targetType: string, targetId: number) {
+    setForm((previous) => {
+      const exists = previous.targets.some((target) => target.target_type === targetType && target.target_id === targetId);
+      return {
+        ...previous,
+        targets: exists
+          ? previous.targets.filter((target) => target.target_type !== targetType || target.target_id !== targetId)
+          : [...previous.targets, { target_type: targetType, target_id: targetId }],
+      };
     });
   }
 
@@ -293,6 +309,24 @@ export default function SchedulesPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">Target Devices and Groups</label>
+                <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 p-2 space-y-1">
+                  {deviceGroups.map((group) => (
+                    <label key={`group-${group.id}`} className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-300">
+                      <input type="checkbox" checked={form.targets.some((target) => target.target_type === 'GROUP' && target.target_id === group.id)} onChange={() => toggleTarget('GROUP', group.id)} />
+                      Group: {group.name}
+                    </label>
+                  ))}
+                  {devices.map((device) => (
+                    <label key={`device-${device.id}`} className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-300">
+                      <input type="checkbox" checked={form.targets.some((target) => target.target_type === 'DEVICE' && target.target_id === device.id)} onChange={() => toggleTarget('DEVICE', device.id)} />
+                      Device: {device.name}
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-gray-500">Choose a device for independent content, or a group for shared content.</p>
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })}

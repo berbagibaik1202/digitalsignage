@@ -129,6 +129,20 @@ router.post('/schedules', authenticate, requireRole('super_admin', 'admin', 'edi
       return;
     }
 
+    if (!playlist_id && !layout_id) {
+      res.status(400).json({ error: 'playlist_id or layout_id is required' });
+      return;
+    }
+
+    if (playlist_id && !await queryOne('SELECT id FROM playlists WHERE id = ? AND tenant_id = ?', [playlist_id, tenantId])) {
+      res.status(400).json({ error: 'Invalid playlist' });
+      return;
+    }
+    if (layout_id && !await queryOne('SELECT id FROM layouts WHERE id = ? AND tenant_id = ?', [layout_id, tenantId])) {
+      res.status(400).json({ error: 'Invalid layout' });
+      return;
+    }
+
     const result = await execute(
       `INSERT INTO schedules
         (tenant_id, name, description, playlist_id, layout_id, start_date, end_date, start_time, end_time, days_of_week, priority)

@@ -276,16 +276,24 @@ router.put('/devices/:id', authenticate, requireRole('super_admin', 'admin'), as
       return;
     }
 
+    if (group_id !== undefined && group_id !== null && !await queryOne(
+      'SELECT id FROM device_groups WHERE id = ? AND tenant_id = ?',
+      [group_id, tenantId]
+    )) {
+      res.status(400).json({ error: 'Invalid device group' });
+      return;
+    }
+
     await execute(
       `UPDATE devices SET
         name = COALESCE(?, name),
         location = COALESCE(?, location),
         orientation = COALESCE(?, orientation),
-        group_id = COALESCE(?, group_id),
+        group_id = IF(?, ?, group_id),
         resolution_width = COALESCE(?, resolution_width),
         resolution_height = COALESCE(?, resolution_height)
        WHERE id = ? AND tenant_id = ?`,
-      [name, location, orientation, group_id, resolution_width, resolution_height, id, tenantId]
+      [name, location, orientation, group_id !== undefined, group_id ?? null, resolution_width, resolution_height, id, tenantId]
     );
 
     const device = await queryOne<DeviceRow>(
