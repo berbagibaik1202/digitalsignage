@@ -278,8 +278,12 @@ img, video {
 
 .text-marquee__content {
   flex: 0 0 auto;
-  padding-right: 3rem;
   white-space: nowrap;
+}
+
+.text-marquee__spacer {
+  flex: 0 0 auto;
+  display: inline-block;
 }
 
 @keyframes mediaFadeIn {
@@ -350,7 +354,7 @@ img, video {
 
 @keyframes textMarqueeScroll {
   from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  to { transform: translateX(calc(-1 * var(--marquee-distance, 0px))); }
 }
 
 /* Other */
