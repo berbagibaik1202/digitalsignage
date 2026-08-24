@@ -12,6 +12,7 @@ function getMediaUrl(mediaUrl: string): string {
 
 interface ManifestItem {
   item_id: number;
+  media_id: number;
   media_url: string;
   mime_type: string;
   duration_seconds: number;
@@ -22,6 +23,16 @@ interface Manifest {
   playlist_id?: number;
   loop: boolean;
   items: ManifestItem[];
+}
+
+async function getPlayableMediaUrl(mediaUrl: string): Promise<string> {
+  if (mediaUrl.startsWith('http://') || mediaUrl.startsWith('https://')) return mediaUrl;
+
+  const response = await fetch(getMediaUrl(mediaUrl), {
+    headers: { Authorization: `Bearer ${getPlayerSession()}` },
+  });
+  if (!response.ok) throw new Error(`Media request failed (${response.status})`);
+  return URL.createObjectURL(await response.blob());
 }
 
 // ─── Get or create device UUID ───────────────────────────────
@@ -113,6 +124,7 @@ export default function PlayerPage() {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [setupToken, setSetupToken] = useState('');
+  const [mediaSource, setMediaSource] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimeRef = useRef<number>(0);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -218,6 +230,23 @@ export default function PlayerPage() {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [currentIndex, manifest, phase]);
 
+  useEffect(() => {
+    if (!manifest || manifest.items.length === 0) return;
+
+    let objectUrl: string | null = null;
+    getPlayableMediaUrl(manifest.items[currentIndex].media_url)
+      .then((url) => {
+        objectUrl = url.startsWith('blob:') ? url : null;
+        setMediaSource(url);
+      })
+      .catch((err) => {
+        setError(err.message || 'Gagal memuat media');
+        setPhase('error');
+      });
+
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [currentIndex, manifest]);
+
   // ─── RENDER ────────────────────────────────────────────────
 
   // Setup screen
@@ -299,13 +328,14 @@ export default function PlayerPage() {
 
   // ─── PLAYING ───────────────────────────────────────────────
   const currentItem = manifest.items[currentIndex];
+  const currentMediaUrl = mediaSource || getMediaUrl(currentItem.media_url);
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', overflow: 'hidden', position: 'relative' }}>
       {currentItem.mime_type.startsWith('image/') ? (
         <img
           key={currentItem.item_id}
-          src={getMediaUrl(currentItem.media_url)}
+          src={currentMediaUrl}
           alt=""
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -313,7 +343,7 @@ export default function PlayerPage() {
       ) : currentItem.mime_type.startsWith('video/') ? (
         <video
           key={currentItem.item_id}
-          src={getMediaUrl(currentItem.media_url)}
+          src={currentMediaUrl}
           autoPlay
           muted
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -327,7 +357,7 @@ export default function PlayerPage() {
         <>
           <audio
             key={currentItem.item_id}
-            src={getMediaUrl(currentItem.media_url)}
+            src={currentMediaUrl}
             autoPlay
             onEnded={() => {
               if (currentIndex < manifest.items.length - 1) setCurrentIndex(currentIndex + 1);
@@ -341,7 +371,7 @@ export default function PlayerPage() {
       ) : (
         <img
           key={currentItem.item_id}
-          src={getMediaUrl(currentItem.media_url)}
+          src={currentMediaUrl}
           alt=""
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
