@@ -66,6 +66,133 @@ function renderMedia(item: MediaItem, source: string, onEnded?: () => void) {
   return <img key={item.item_id} src={source} alt="" className="w-full h-full object-cover" />;
 }
 
+type YouTubeKind = 'video' | 'playlist';
+
+interface YouTubeEmbedInfo {
+  kind: YouTubeKind;
+  embedUrl: string;
+  videoId?: string;
+  playlistId?: string;
+  previewUrl?: string;
+  label: string;
+}
+
+let youtubeApiPromise: Promise<void> | null = null;
+
+function loadYouTubeIframeApi(): Promise<void> {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('Window is not available'));
+  }
+
+  const win = window as Window & {
+    YT?: { Player?: new (target: HTMLElement | string, options: any) => any };
+    onYouTubeIframeAPIReady?: () => void;
+  };
+
+  if (win.YT?.Player) {
+    return Promise.resolve();
+  }
+
+  if (youtubeApiPromise) {
+    return youtubeApiPromise;
+  }
+
+  youtubeApiPromise = new Promise<void>((resolve, reject) => {
+    const previousCallback = win.onYouTubeIframeAPIReady;
+    const timeout = window.setTimeout(() => {
+      if (!win.YT?.Player) {
+        youtubeApiPromise = null;
+        reject(new Error('YouTube API timeout'));
+      }
+    }, 15000);
+
+    win.onYouTubeIframeAPIReady = () => {
+      window.clearTimeout(timeout);
+      if (typeof previousCallback === 'function') {
+        previousCallback();
+      }
+      resolve();
+    };
+
+    const existingScript = document.querySelector<HTMLScriptElement>('script[data-youtube-iframe-api="true"]');
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.dataset.youtubeIframeApi = 'true';
+      script.src = 'https://www.youtube.com/iframe_api';
+      script.async = true;
+      script.onerror = () => {
+        window.clearTimeout(timeout);
+        youtubeApiPromise = null;
+        reject(new Error('Failed to load YouTube API'));
+      };
+      document.head.appendChild(script);
+    }
+  }).catch((error) => {
+    youtubeApiPromise = null;
+    throw error;
+  });
+
+  return youtubeApiPromise;
+}
+
+function parseYouTubeUrl(rawUrl: string): YouTubeEmbedInfo | null {
+  try {
+    const url = new URL(rawUrl);
+    const host = url.hostname.replace(/^www\./, '').toLowerCase();
+    const playlistId = url.searchParams.get('list') || '';
+
+    if (host === 'youtu.be' || host.endsWith('youtube.com')) {
+      let videoId = '';
+
+      if (host === 'youtu.be') {
+        videoId = url.pathname.split('/').filter(Boolean)[0] || '';
+      } else if (url.pathname === '/watch') {
+        videoId = url.searchParams.get('v') || '';
+      } else if (url.pathname.startsWith('/embed/')) {
+        videoId = url.pathname.split('/').filter(Boolean)[1] || '';
+      } else if (url.pathname.startsWith('/shorts/')) {
+        videoId = url.pathname.split('/').filter(Boolean)[1] || '';
+      }
+
+      if ((url.pathname.includes('/playlist') || url.pathname.includes('/videoseries') || (!videoId && playlistId)) && playlistId) {
+        const embedUrl = new URL('https://www.youtube.com/embed/videoseries');
+        embedUrl.searchParams.set('list', playlistId);
+        embedUrl.searchParams.set('autoplay', '1');
+        embedUrl.searchParams.set('mute', '1');
+        embedUrl.searchParams.set('playsinline', '1');
+        embedUrl.searchParams.set('rel', '0');
+        embedUrl.searchParams.set('modestbranding', '1');
+        return {
+          kind: 'playlist',
+          embedUrl: embedUrl.toString(),
+          playlistId,
+          label: 'YouTube Playlist',
+        };
+      }
+
+      if (videoId) {
+        const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`);
+        embedUrl.searchParams.set('autoplay', '1');
+        embedUrl.searchParams.set('mute', '1');
+        embedUrl.searchParams.set('playsinline', '1');
+        embedUrl.searchParams.set('rel', '0');
+        embedUrl.searchParams.set('modestbranding', '1');
+        return {
+          kind: 'video',
+          embedUrl: embedUrl.toString(),
+          videoId,
+          previewUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+          label: 'YouTube Video',
+        };
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function MediaZone({ zone }: { zone: Zone }) {
   const [index, setIndex] = useState(0);
   const [source, setSource] = useState<string | null>(null);
@@ -202,6 +329,152 @@ function MediaZone({ zone }: { zone: Zone }) {
   );
 }
 
+function resolveEmbeddedUrl(rawUrl: string): string {
+  const parsed = parseYouTubeUrl(rawUrl);
+  if (parsed) {
+    return parsed.embedUrl;
+  }
+
+  try {
+    return new URL(rawUrl).toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
+function YouTubeZone({ zone }: { zone: Zone }) {
+  const url = typeof zone.config.url === 'string' ? zone.config.url : typeof zone.config.source_url === 'string' ? zone.config.source_url : '';
+  const parsed = parseYouTubeUrl(url);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(parsed ? 'loading' : 'error');
+  const [errorMessage, setErrorMessage] = useState<string | null>(parsed ? null : 'URL YouTube tidak valid');
+  const playerRef = useRef<HTMLDivElement | null>(null);
+  const playerInstanceRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!parsed) {
+      setStatus('error');
+      setErrorMessage('URL YouTube tidak valid');
+      return;
+    }
+
+    let cancelled = false;
+    let timeoutId: number | null = null;
+    setStatus('loading');
+    setErrorMessage(null);
+
+    const mount = playerRef.current;
+    if (!mount) {
+      return;
+    }
+
+    mount.innerHTML = '';
+
+    loadYouTubeIframeApi()
+      .then(() => {
+        if (cancelled || !mount) return;
+        const win = window as Window & {
+          YT?: {
+            Player?: new (target: HTMLElement | string, options: any) => any;
+          };
+        };
+
+        if (!win.YT?.Player) {
+          throw new Error('YouTube player API unavailable');
+        }
+
+        playerInstanceRef.current?.destroy?.();
+        playerInstanceRef.current = new win.YT.Player(mount, {
+          width: '100%',
+          height: '100%',
+          videoId: parsed.kind === 'video' ? parsed.videoId : undefined,
+          playerVars: parsed.kind === 'playlist'
+            ? {
+                listType: 'playlist',
+                list: parsed.playlistId,
+                autoplay: 1,
+                mute: 1,
+                playsinline: 1,
+                rel: 0,
+                modestbranding: 1,
+              }
+            : {
+                autoplay: 1,
+                mute: 1,
+                playsinline: 1,
+                rel: 0,
+                modestbranding: 1,
+              },
+          events: {
+            onReady: (event: { target: { mute: () => void; playVideo: () => void } }) => {
+              if (timeoutId) {
+                window.clearTimeout(timeoutId);
+                timeoutId = null;
+              }
+              event.target.mute();
+              event.target.playVideo();
+              if (!cancelled) setStatus('ready');
+            },
+            onError: () => {
+              if (timeoutId) {
+                window.clearTimeout(timeoutId);
+                timeoutId = null;
+              }
+              if (cancelled) return;
+              setStatus('error');
+              setErrorMessage('Embed YouTube ditolak atau video tidak tersedia untuk disematkan.');
+            },
+          },
+        });
+
+        timeoutId = window.setTimeout(() => {
+          if (!cancelled) {
+            setStatus('error');
+            setErrorMessage('YouTube gagal dimuat. Kemungkinan embedding diblokir.');
+          }
+        }, 12000);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStatus('error');
+          setErrorMessage('Gagal memuat YouTube player.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
+      playerInstanceRef.current?.destroy?.();
+      playerInstanceRef.current = null;
+    };
+  }, [parsed?.embedUrl, parsed?.kind, parsed?.playlistId, parsed?.videoId]);
+
+  return (
+    <div className="w-full h-full relative overflow-hidden bg-black">
+      {parsed?.previewUrl && (
+        <img
+          src={parsed.previewUrl}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover blur-lg scale-105"
+          style={{ opacity: status === 'ready' ? 0.15 : 0.35 }}
+        />
+      )}
+
+      <div ref={playerRef} className="absolute inset-0" style={{ opacity: status === 'ready' ? 1 : 0, transition: 'opacity 200ms ease' }} />
+
+      {status !== 'ready' && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-black/55 to-black/85 p-4 text-center text-white">
+          <div className="max-w-[90%]">
+            <div className="text-[0.8rem] font-semibold uppercase tracking-[0.2em] text-white/70">{parsed?.label || 'YouTube'}</div>
+            <div className="mt-2 text-lg font-semibold">{status === 'error' ? 'Preview gagal dimuat' : 'Memuat preview'}</div>
+            <div className="mt-1 text-sm text-white/75">{errorMessage || 'Mencoba membuka embed YouTube yang sesuai.'}</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UrlZone({ zone }: { zone: Zone }) {
   const url = typeof zone.config.url === 'string' ? zone.config.url : typeof zone.config.source_url === 'string' ? zone.config.source_url : '';
 
@@ -209,12 +482,21 @@ function UrlZone({ zone }: { zone: Zone }) {
     return <div className="w-full h-full bg-black" />;
   }
 
+  const parsed = parseYouTubeUrl(url);
+  if (parsed) {
+    return <YouTubeZone zone={zone} />;
+  }
+
+  const embeddedUrl = resolveEmbeddedUrl(url);
+
   return (
     <iframe
       title={zone.name}
-      src={url}
+      src={embeddedUrl}
       loading="eager"
       referrerPolicy="no-referrer"
+      allow="autoplay; encrypted-media; picture-in-picture"
+      allowFullScreen
       className="w-full h-full border-0 bg-black"
     />
   );
