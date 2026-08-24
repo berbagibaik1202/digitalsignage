@@ -350,7 +350,7 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
         );
         const layoutZones = await Promise.all(zones.map(async (zone) => {
           const config = parseZoneConfig(zone.config);
-          const configuredPlaylistId = Number(config.playlist_id || schedule.playlist_id || 0);
+          const configuredPlaylistId = Number(config.playlist_id || 0);
           const playlistData = zone.zone_type === 'MEDIA' && configuredPlaylistId
             ? await getPlaylistItems(configuredPlaylistId, tenantId)
             : null;

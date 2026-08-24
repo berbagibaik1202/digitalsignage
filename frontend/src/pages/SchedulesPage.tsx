@@ -215,9 +215,12 @@ export default function SchedulesPage() {
                     <p className="text-white font-medium">{s.name}</p>
                     <p className="text-xs text-gray-500">Priority: {s.priority}</p>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-400">{s.playlist_name || '—'}</td>
                   <td className="px-4 py-3 text-sm text-gray-400">
-                    {s.start_date}{s.end_date ? ` → ${s.end_date}` : ''}
+                    {s.layout_name || s.playlist_name || '-'}
+                    {s.layout_name ? <div className="text-xs text-gray-500">Layout mode</div> : null}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-400">
+                    {s.start_date}{s.end_date ? ` -> ${s.end_date}` : ''}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-400">
                     {s.start_time && s.end_time ? `${s.start_time} - ${s.end_time}` : 'All day'}
@@ -259,20 +262,38 @@ export default function SchedulesPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Playlist</label>
-                  <select value={form.playlist_id} onChange={(e) => setForm({ ...form, playlist_id: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">None</option>
-                    {playlists.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                </div>
-                <div>
                   <label className="block text-sm text-gray-400 mb-1">Layout</label>
-                  <select value={form.layout_id} onChange={(e) => setForm({ ...form, layout_id: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <select
+                    value={form.layout_id}
+                    onChange={(e) => {
+                      const layoutId = e.target.value;
+                      setForm({
+                        ...form,
+                        layout_id: layoutId,
+                        playlist_id: layoutId ? '' : form.playlist_id,
+                      });
+                    }}
+                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
                     <option value="">Fullscreen playlist</option>
                     {layouts.map((layout) => <option key={layout.id} value={layout.id}>{layout.name}</option>)}
                   </select>
+                  <p className="mt-1 text-xs text-gray-500">Jika layout dipilih, konten diambil dari playlist per zone di halaman Layouts.</p>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Playlist</label>
+                  <select
+                    value={form.playlist_id}
+                    onChange={(e) => setForm({ ...form, playlist_id: e.target.value })}
+                    disabled={!!form.layout_id}
+                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                  >
+                    <option value="">None</option>
+                    {playlists.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {form.layout_id ? 'Dinonaktifkan saat layout dipilih.' : 'Dipakai untuk mode fullscreen tanpa layout.'}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Priority</label>
