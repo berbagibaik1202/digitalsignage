@@ -281,7 +281,7 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
          AND (s.start_time IS NULL OR s.start_time <= ?)
          AND (s.end_time IS NULL OR s.end_time >= ?)
          AND (s.days_of_week IS NULL OR FIND_IN_SET(?, s.days_of_week) > 0)
-         AND (st.target_id = ? OR st.target_id IN (
+         AND (st.id IS NULL OR st.target_id = ? OR st.target_id IN (
            SELECT dg.id FROM device_groups dg
            JOIN devices d ON d.group_id = dg.id
            WHERE d.id = ?

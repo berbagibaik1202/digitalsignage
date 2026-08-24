@@ -340,9 +340,14 @@ export default function SchedulesPage() {
                   className="w-4 h-4 rounded bg-gray-800 border-gray-700" />
                 <label className="text-sm text-gray-400">Active</label>
               </div>
-              <button type="submit" className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg">
-                {editingSchedule ? 'Update' : 'Create'}
-              </button>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg">
+                  {editingSchedule ? 'Update' : 'Create'}
+                </button>
+                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded-lg">
+                  Close
+                </button>
+              </div>
             </form>
           </div>
         </div>

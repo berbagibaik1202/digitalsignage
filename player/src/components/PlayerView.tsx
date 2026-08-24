@@ -39,13 +39,14 @@ export default function PlayerView({ onError }: PlayerViewProps) {
   const fetchManifest = useCallback(async () => {
     try {
       const m = await getManifest() as CachedManifest | null;
-      if (m && (m.items.length > 0 || m.layout)) {
+      if (m) {
         if (m.manifest_version === manifestVersionRef.current) return;
 
         await cacheManifest(m, getPlayerSessionToken(), getMediaUrl);
         manifestVersionRef.current = m.manifest_version;
         setManifest(m);
         setCurrentIndex(0);
+        setIsBlack(false);
         setError(null);
       } else {
         const cachedManifest = getCachedManifest();
