@@ -26,6 +26,8 @@ interface LayoutZone {
   config: any;
 }
 
+interface Playlist { id: number; name: string; }
+
 export default function LayoutsPage() {
   const [layouts, setLayouts] = useState<Layout[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +40,7 @@ export default function LayoutsPage() {
   const [selectedLayout, setSelectedLayout] = useState<Layout | null>(null);
   const [zones, setZones] = useState<LayoutZone[]>([]);
   const [editingZone, setEditingZone] = useState<LayoutZone | null>(null);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
 
   // Form state
   const [formName, setFormName] = useState('');
@@ -54,8 +57,17 @@ export default function LayoutsPage() {
   const [zoneW, setZoneW] = useState(1920);
   const [zoneH, setZoneH] = useState(1080);
   const [zoneZ, setZoneZ] = useState(0);
+  const [zonePlaylistId, setZonePlaylistId] = useState('');
 
   useEffect(() => { loadLayouts(); }, [page, search]);
+  useEffect(() => { loadPlaylists(); }, []);
+
+  async function loadPlaylists() {
+    try {
+      const res = await api.get('/playlists?limit=100');
+      setPlaylists(res.data.data || []);
+    } catch (err) { console.error('Failed to load playlists:', err); }
+  }
 
   async function loadLayouts() {
     try {
@@ -105,7 +117,10 @@ export default function LayoutsPage() {
   async function handleSaveZone() {
     if (!selectedLayout) return;
     try {
-      const data = { name: zoneName, zone_type: zoneType, x: zoneX, y: zoneY, width: zoneW, height: zoneH, z_index: zoneZ };
+      const data = {
+        name: zoneName, zone_type: zoneType, x: zoneX, y: zoneY, width: zoneW, height: zoneH, z_index: zoneZ,
+        config: zoneType === 'MEDIA' && zonePlaylistId ? { playlist_id: Number(zonePlaylistId) } : {},
+      };
       if (editingZone) {
         await api.put(`/layouts/${selectedLayout.id}/zones/${editingZone.id}`, data);
       } else {
@@ -147,11 +162,12 @@ export default function LayoutsPage() {
     setZoneW(zone.width);
     setZoneH(zone.height);
     setZoneZ(zone.z_index);
+    setZonePlaylistId(zone.config?.playlist_id ? String(zone.config.playlist_id) : '');
     setShowZoneModal(true);
   }
 
   function resetForm() { setFormName(''); setFormDesc(''); setFormWidth(1920); setFormHeight(1080); setFormBgColor('#000000'); }
-  function resetZoneForm() { setZoneName(''); setZoneType('MEDIA'); setZoneX(0); setZoneY(0); setZoneW(1920); setZoneH(1080); setZoneZ(0); }
+  function resetZoneForm() { setZoneName(''); setZoneType('MEDIA'); setZoneX(0); setZoneY(0); setZoneW(1920); setZoneH(1080); setZoneZ(0); setZonePlaylistId(''); }
 
   const zoneTypes = ['MEDIA', 'TEXT', 'CLOCK', 'WEATHER', 'RSS', 'HTML'];
 
@@ -313,6 +329,15 @@ export default function LayoutsPage() {
                   {zoneTypes.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
+              {zoneType === 'MEDIA' && (
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Playlist</label>
+                  <select value={zonePlaylistId} onChange={e => setZonePlaylistId(e.target.value)} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <option value="">Use schedule playlist</option>
+                    {playlists.map(playlist => <option key={playlist.id} value={playlist.id}>{playlist.name}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-sm text-gray-400 mb-1">X</label><input type="number" value={zoneX} onChange={e => setZoneX(Number(e.target.value))} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" /></div>
                 <div><label className="block text-sm text-gray-400 mb-1">Y</label><input type="number" value={zoneY} onChange={e => setZoneY(Number(e.target.value))} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none" /></div>

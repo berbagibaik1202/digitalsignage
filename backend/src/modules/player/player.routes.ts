@@ -10,19 +10,70 @@ import { getFileStream } from '../../services/storage';
 
 const router = Router();
 
-function createManifestVersion(playlistId: number, scheduleId: number | null, loop: boolean, items: RowDataPacket[]): number {
+function createManifestVersion(
+  playlistId: number,
+  scheduleId: number | null,
+  loop: boolean,
+  items: Array<{ id?: number; item_id?: number; media_id?: number; duration_seconds?: number; media_duration?: number; transition?: string | null }>
+): number {
   const content = JSON.stringify({
     playlistId,
     scheduleId,
     loop,
     items: items.map((item) => ({
-      itemId: item.id,
+      itemId: item.id || item.item_id,
       mediaId: item.media_id,
       durationSeconds: item.duration_seconds || item.media_duration || 10,
       transition: item.transition,
     })),
   });
   return crypto.createHash('sha256').update(content).digest().readUInt32BE(0);
+}
+
+function createLayoutManifestVersion(layout: RowDataPacket, scheduleId: number, zones: unknown[]): number {
+  const content = JSON.stringify({ layout, scheduleId, zones });
+  return crypto.createHash('sha256').update(content).digest().readUInt32BE(0);
+}
+
+function parseZoneConfig(config: unknown): Record<string, unknown> {
+  if (typeof config === 'string') {
+    try {
+      return JSON.parse(config) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+  return config && typeof config === 'object' ? config as Record<string, unknown> : {};
+}
+
+async function getPlaylistItems(playlistId: number, tenantId: number) {
+  const playlist = await queryOne<RowDataPacket>(
+    'SELECT id, loop_playback FROM playlists WHERE id = ? AND tenant_id = ?',
+    [playlistId, tenantId]
+  );
+  if (!playlist) return null;
+
+  const items = await query<RowDataPacket[]>(
+    `SELECT pi.*, m.mime_type, m.duration_seconds AS media_duration
+     FROM playlist_items pi
+     JOIN media m ON pi.media_id = m.id AND m.tenant_id = pi.tenant_id
+     WHERE pi.playlist_id = ? AND pi.tenant_id = ?
+     ORDER BY pi.sort_order ASC`,
+    [playlistId, tenantId]
+  );
+
+  return {
+    playlist,
+    items,
+    manifestItems: items.map((item) => ({
+      item_id: item.id,
+      media_id: item.media_id,
+      media_url: `/api/v1/player/media/${item.media_id}`,
+      mime_type: item.mime_type,
+      duration_seconds: item.duration_seconds || item.media_duration || 10,
+      transition: item.transition,
+    })),
+  };
 }
 
 // ─── POST /api/v1/player/register ───────────────────────────────
@@ -274,7 +325,7 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
       }));
 
       res.json({
-        manifest_version: createManifestVersion(defaultPlaylist.id, null, defaultPlaylist.loop_playback, items),
+        manifest_version: createManifestVersion(defaultPlaylist.id, null, defaultPlaylist.loop_playback, items as Array<{ id?: number; media_id?: number; duration_seconds?: number; media_duration?: number; transition?: string | null }>),
         playlist_id: defaultPlaylist.id,
         loop: defaultPlaylist.loop_playback,
         items: manifestItems,
@@ -283,7 +334,51 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
     }
 
     const schedule = schedules[0];
-    const playlistId = schedule.playlist_id || schedule.playlist_id;
+    if (schedule.layout_id) {
+      const layout = await queryOne<RowDataPacket>(
+        'SELECT id, name, width, height, background_color FROM layouts WHERE id = ? AND tenant_id = ?',
+        [schedule.layout_id, tenantId]
+      );
+
+      if (layout) {
+        const zones = await query<RowDataPacket[]>(
+          'SELECT * FROM layout_zones WHERE layout_id = ? AND tenant_id = ? ORDER BY z_index ASC',
+          [layout.id, tenantId]
+        );
+        const layoutZones = await Promise.all(zones.map(async (zone) => {
+          const config = parseZoneConfig(zone.config);
+          const configuredPlaylistId = Number(config.playlist_id || schedule.playlist_id || 0);
+          const playlistData = zone.zone_type === 'MEDIA' && configuredPlaylistId
+            ? await getPlaylistItems(configuredPlaylistId, tenantId)
+            : null;
+
+          return {
+            id: zone.id,
+            name: zone.name,
+            zone_type: zone.zone_type,
+            x: zone.x,
+            y: zone.y,
+            width: zone.width,
+            height: zone.height,
+            z_index: zone.z_index,
+            config,
+            playlist_id: playlistData?.playlist.id || null,
+            loop: playlistData?.playlist.loop_playback ?? true,
+            items: playlistData?.manifestItems || [],
+          };
+        }));
+        res.json({
+          manifest_version: createLayoutManifestVersion(layout, schedule.id, layoutZones),
+          schedule_id: schedule.id,
+          layout: { ...layout, zones: layoutZones },
+          items: [],
+          loop: true,
+        });
+        return;
+      }
+    }
+
+    const playlistId = schedule.playlist_id;
 
     if (!playlistId) {
       res.json({ manifest_version: Date.now(), items: [], loop: false });
@@ -314,7 +409,7 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
     }));
 
     res.json({
-      manifest_version: createManifestVersion(playlistId, schedule.id, playlist?.loop_playback ?? true, items),
+      manifest_version: createManifestVersion(playlistId, schedule.id, playlist?.loop_playback ?? true, items as Array<{ id?: number; media_id?: number; duration_seconds?: number; media_duration?: number; transition?: string | null }>),
       schedule_id: schedule.id,
       playlist_id: playlistId,
       loop: playlist?.loop_playback ?? true,

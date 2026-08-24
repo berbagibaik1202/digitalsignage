@@ -15,6 +15,24 @@ export interface CachedManifest {
   playlist_id?: number;
   loop: boolean;
   items: CachedManifestItem[];
+  layout?: {
+    width: number;
+    height: number;
+    background_color: string;
+    zones: Array<{
+      id: number;
+      name: string;
+      zone_type: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      z_index: number;
+      config: Record<string, unknown>;
+      loop: boolean;
+      items: CachedManifestItem[];
+    }>;
+  };
 }
 
 function getMediaCache() {
@@ -35,7 +53,12 @@ export async function cacheManifest(manifest: CachedManifest, token: string | nu
   const cache = await getMediaCache();
   if (!cache) throw new Error('Offline media cache is unavailable');
 
-  for (const item of manifest.items) {
+  const mediaItems = [
+    ...manifest.items,
+    ...(manifest.layout?.zones.flatMap((zone) => zone.items) || []),
+  ];
+
+  for (const item of mediaItems) {
     const mediaUrl = getMediaUrl(item.media_url);
     const cached = await cache.match(mediaUrl);
     if (cached) continue;

@@ -20,6 +20,7 @@ interface Schedule {
 }
 
 interface Playlist { id: number; name: string; }
+interface Layout { id: number; name: string; }
 interface Device { id: number; name: string; status: string; }
 interface DeviceGroup { id: number; name: string; }
 
@@ -36,6 +37,7 @@ export default function SchedulesPage() {
 
   // Related data
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [layouts, setLayouts] = useState<Layout[]>([]);
   const [_devices, setDevices] = useState<Device[]>([]);
   const [_deviceGroups, setDeviceGroups] = useState<DeviceGroup[]>([]);
 
@@ -66,12 +68,14 @@ export default function SchedulesPage() {
 
   async function loadRelated() {
     try {
-      const [plRes, devRes, grpRes] = await Promise.all([
+      const [plRes, layoutRes, devRes, grpRes] = await Promise.all([
         api.get('/playlists?limit=100'),
+        api.get('/layouts?limit=100'),
         api.get('/devices?limit=100'),
         api.get('/device-groups'),
       ]);
       setPlaylists(plRes.data.data);
+      setLayouts(layoutRes.data.data);
       setDevices(devRes.data.data);
       setDeviceGroups(grpRes.data.groups);
     } catch (err) {
@@ -237,6 +241,14 @@ export default function SchedulesPage() {
                     className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">None</option>
                     {playlists.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Layout</label>
+                  <select value={form.layout_id} onChange={(e) => setForm({ ...form, layout_id: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Fullscreen playlist</option>
+                    {layouts.map((layout) => <option key={layout.id} value={layout.id}>{layout.name}</option>)}
                   </select>
                 </div>
                 <div>

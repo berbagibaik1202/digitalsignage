@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getManifest, reportPlayback, getMediaUrl, getPlayerSessionToken } from '../services/player';
 import { cacheManifest, getCachedManifest, getCachedMediaUrl, type CachedManifest } from '../services/media-cache';
+import LayoutView from './LayoutView';
 
 interface ManifestItem {
   item_id: number;
@@ -16,6 +17,7 @@ interface Manifest {
   playlist_id?: number;
   loop: boolean;
   items: ManifestItem[];
+  layout?: CachedManifest['layout'];
 }
 
 interface PlayerViewProps {
@@ -188,6 +190,10 @@ export default function PlayerView({ onError }: PlayerViewProps) {
   }
 
   // ─── Current Item ──────────────────────────────────────────
+  if (manifest.layout) {
+    return <LayoutView layout={manifest.layout} />;
+  }
+
   const currentItem = manifest.items[currentIndex];
   const currentMediaUrl = mediaSource || getMediaUrl(currentItem.media_url);
 
