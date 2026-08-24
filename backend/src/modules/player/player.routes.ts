@@ -6,9 +6,24 @@ import { RowDataPacket } from 'mysql2';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config';
-import { getPresignedUrl } from '../../services/storage';
+import { getFileStream } from '../../services/storage';
 
 const router = Router();
+
+function createManifestVersion(playlistId: number, scheduleId: number | null, loop: boolean, items: RowDataPacket[]): number {
+  const content = JSON.stringify({
+    playlistId,
+    scheduleId,
+    loop,
+    items: items.map((item) => ({
+      itemId: item.id,
+      mediaId: item.media_id,
+      durationSeconds: item.duration_seconds || item.media_duration || 10,
+      transition: item.transition,
+    })),
+  });
+  return crypto.createHash('sha256').update(content).digest().readUInt32BE(0);
+}
 
 // ─── POST /api/v1/player/register ───────────────────────────────
 // Device self-registration with registration token
@@ -249,16 +264,17 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
         [defaultPlaylist.id, tenantId]
       );
 
-      const manifestItems = await Promise.all(items.map(async (item) => ({
+      const manifestItems = items.map((item) => ({
         item_id: item.id,
-        media_url: await getPresignedUrl(item.storage_key),
+        media_id: item.media_id,
+        media_url: `/api/v1/player/media/${item.media_id}`,
         mime_type: item.mime_type,
         duration_seconds: item.duration_seconds || item.media_duration || 10,
         transition: item.transition,
-      })));
+      }));
 
       res.json({
-        manifest_version: Date.now(),
+        manifest_version: createManifestVersion(defaultPlaylist.id, null, defaultPlaylist.loop_playback, items),
         playlist_id: defaultPlaylist.id,
         loop: defaultPlaylist.loop_playback,
         items: manifestItems,
@@ -288,16 +304,17 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
       [playlistId, tenantId]
     );
 
-    const manifestItems = await Promise.all(items.map(async (item) => ({
+    const manifestItems = items.map((item) => ({
       item_id: item.id,
-      media_url: await getPresignedUrl(item.storage_key),
+      media_id: item.media_id,
+      media_url: `/api/v1/player/media/${item.media_id}`,
       mime_type: item.mime_type,
       duration_seconds: item.duration_seconds || item.media_duration || 10,
       transition: item.transition,
-    })));
+    }));
 
     res.json({
-      manifest_version: Date.now(),
+      manifest_version: createManifestVersion(playlistId, schedule.id, playlist?.loop_playback ?? true, items),
       schedule_id: schedule.id,
       playlist_id: playlistId,
       loop: playlist?.loop_playback ?? true,
@@ -305,6 +322,43 @@ router.post('/player/manifest', authenticate, async (req: Request, res: Response
     });
   } catch (err) {
     console.error('Player manifest error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── GET /api/v1/player/media/:mediaId ───────────────────────
+// Player media is fetched with its device session so it can be cached for offline playback.
+router.get('/player/media/:mediaId', authenticate, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const deviceId = (req.user as any).deviceId;
+
+    if (!deviceId) {
+      res.status(401).json({ error: 'Device authentication required' });
+      return;
+    }
+
+    const media = await queryOne<RowDataPacket>(
+      'SELECT storage_key, mime_type, file_size FROM media WHERE id = ? AND tenant_id = ?',
+      [req.params.mediaId, tenantId]
+    );
+
+    if (!media) {
+      res.status(404).json({ error: 'Media not found' });
+      return;
+    }
+
+    const stream = await getFileStream(media.storage_key);
+    res.setHeader('Content-Type', media.mime_type);
+    res.setHeader('Content-Length', media.file_size);
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    stream.on('error', (error) => {
+      console.error('Player media stream error:', error);
+      if (!res.headersSent) res.status(500).json({ error: 'Failed to stream media' });
+    });
+    stream.pipe(res);
+  } catch (err) {
+    console.error('Player media error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

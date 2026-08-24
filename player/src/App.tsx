@@ -6,7 +6,6 @@ import CommandHandler from './components/CommandHandler';
 import { useHeartbeat } from './hooks/useHeartbeat';
 import {
   isRegistered,
-  isAuthenticated,
   registerDevice,
   authenticateDevice,
   setApiBase,
@@ -28,8 +27,8 @@ export default function App() {
     if (!isRegistered()) return;
 
     setPhase('authenticating');
-    authenticateDevice().then((authenticated) => {
-      setPhase(authenticated ? 'playing' : 'setup');
+    authenticateDevice().then(() => {
+      setPhase('playing');
     });
   }, []);
 

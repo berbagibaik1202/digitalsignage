@@ -6,6 +6,7 @@ Display client untuk menampilkan konten digital signage di TV/Monitor.
 
 - **Auto-register** device ke backend
 - **Playlist playback** dengan loop
+- **Offline playback** dari playlist dan media terakhir yang berhasil diunduh
 - **Heartbeat** untuk monitoring status device
 - **Command handling** (reboot, reload, screenshot)
 - **Fullscreen kiosk mode** (tanpa cursor, tanpa taskbar)
@@ -67,6 +68,10 @@ google-chrome --kiosk --no-first-run --disable-session-crashed-bubble http://you
 Registration token dapat dilihat di:
 - Dashboard → Devices → Registration Token
 - Atau buat baru via API: `POST /api/v1/tenants`
+
+## Playback Offline
+
+Saat player online, manifest dan seluruh media playlist baru diunduh ke penyimpanan lokal sebelum playlist diterapkan. Jika koneksi internet terputus, player tetap memutar playlist terakhir yang tersimpan. Saat koneksi kembali, player hanya memperbarui playlist apabila isi manifest berubah.
 
 ## Flow
 

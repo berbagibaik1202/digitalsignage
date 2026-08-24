@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getManifest, reportPlayback, getMediaUrl } from '../services/player';
+import { getManifest, reportPlayback, getMediaUrl, getPlayerSessionToken } from '../services/player';
+import { cacheManifest, getCachedManifest, getCachedMediaUrl, type CachedManifest } from '../services/media-cache';
 
 interface ManifestItem {
   item_id: number;
+  media_id: number;
   media_url: string;
   mime_type: string;
   duration_seconds: number;
@@ -26,23 +28,43 @@ export default function PlayerView({ onError }: PlayerViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isBlack, setIsBlack] = useState(false);
+  const [mediaSource, setMediaSource] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startTimeRef = useRef<number>(0);
+  const manifestVersionRef = useRef<number | null>(null);
 
   // Fetch manifest from backend
   const fetchManifest = useCallback(async () => {
     try {
-      const m = await getManifest();
+      const m = await getManifest() as CachedManifest | null;
       if (m && m.items.length > 0) {
+        if (m.manifest_version === manifestVersionRef.current) return;
+
+        await cacheManifest(m, getPlayerSessionToken(), getMediaUrl);
+        manifestVersionRef.current = m.manifest_version;
         setManifest(m);
         setCurrentIndex(0);
         setError(null);
       } else {
-        setError('Tidak ada konten yang tersedia');
+        const cachedManifest = getCachedManifest();
+        if (cachedManifest?.items.length) {
+          manifestVersionRef.current = cachedManifest.manifest_version;
+          setManifest(cachedManifest);
+          setError(null);
+        } else {
+          setError('Tidak ada konten yang tersedia');
+        }
       }
     } catch (err: any) {
-      setError(err.message || 'Gagal memuat manifest');
-      onError?.(err.message);
+      const cachedManifest = getCachedManifest();
+      if (cachedManifest?.items.length) {
+        manifestVersionRef.current = cachedManifest.manifest_version;
+        setManifest(cachedManifest);
+        setError(null);
+      } else {
+        setError(err.message || 'Gagal memuat manifest');
+        onError?.(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -111,6 +133,20 @@ export default function PlayerView({ onError }: PlayerViewProps) {
     };
   }, [currentIndex, manifest, playCurrentItem]);
 
+  useEffect(() => {
+    if (!manifest || manifest.items.length === 0) return;
+
+    let objectUrl: string | null = null;
+    getCachedMediaUrl(manifest.items[currentIndex].media_url, getMediaUrl).then((cachedUrl) => {
+      objectUrl = cachedUrl;
+      setMediaSource(cachedUrl || getMediaUrl(manifest.items[currentIndex].media_url));
+    });
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [currentIndex, manifest]);
+
   // ─── Loading Screen ────────────────────────────────────────
   if (loading) {
     return (
@@ -153,13 +189,14 @@ export default function PlayerView({ onError }: PlayerViewProps) {
 
   // ─── Current Item ──────────────────────────────────────────
   const currentItem = manifest.items[currentIndex];
+  const currentMediaUrl = mediaSource || getMediaUrl(currentItem.media_url);
 
   return (
     <div className="w-screen h-screen bg-black overflow-hidden">
       {currentItem.mime_type.startsWith('image/') ? (
         <img
           key={currentItem.item_id}
-          src={getMediaUrl(currentItem.media_url)}
+          src={currentMediaUrl}
           alt=""
           className="w-full h-full object-cover"
           onError={() => {
@@ -174,7 +211,7 @@ export default function PlayerView({ onError }: PlayerViewProps) {
       ) : currentItem.mime_type.startsWith('video/') ? (
         <video
           key={currentItem.item_id}
-          src={getMediaUrl(currentItem.media_url)}
+          src={currentMediaUrl}
           autoPlay
           muted
           className="w-full h-full object-cover"
@@ -209,7 +246,7 @@ export default function PlayerView({ onError }: PlayerViewProps) {
           {/* Audio: show black screen with audio */}
           <audio
             key={currentItem.item_id}
-            src={getMediaUrl(currentItem.media_url)}
+            src={currentMediaUrl}
             autoPlay
             onEnded={() => {
               if (currentIndex < manifest.items.length - 1) {
@@ -229,7 +266,7 @@ export default function PlayerView({ onError }: PlayerViewProps) {
         /* Unknown type: show as image */
         <img
           key={currentItem.item_id}
-          src={getMediaUrl(currentItem.media_url)}
+          src={currentMediaUrl}
           alt=""
           className="w-full h-full object-cover"
         />

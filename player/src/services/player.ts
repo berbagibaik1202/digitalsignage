@@ -12,6 +12,7 @@ interface DeviceInfo {
 
 interface ManifestItem {
   item_id: number;
+  media_id: number;
   media_url: string;
   mime_type: string;
   duration_seconds: number;
@@ -249,6 +250,10 @@ export function isRegistered(): boolean {
 // ─── Check if Authenticated ──────────────────────────────────
 export function isAuthenticated(): boolean {
   return !!getSessionToken();
+}
+
+export function getPlayerSessionToken(): string | null {
+  return getSessionToken();
 }
 
 // ─── Clear Auth ──────────────────────────────────────────────
