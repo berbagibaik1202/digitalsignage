@@ -1,1 +1,35 @@
 @import "tailwindcss";
+
+.clock-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  white-space: nowrap;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.clock-digit {
+  display: inline-block;
+  min-width: 0.62em;
+  text-align: center;
+  will-change: transform, opacity;
+}
+
+.clock-digit-changing {
+  animation: clockDigitPulse 280ms ease-out;
+}
+
+.clock-separator {
+  display: inline-block;
+  min-width: 0.42em;
+  text-align: center;
+}
+
+@keyframes clockDigitPulse {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  45% { transform: translateY(-0.12em) scale(1.1); opacity: 0.95; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}

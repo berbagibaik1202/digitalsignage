@@ -29,6 +29,40 @@ interface LayoutZone {
 
 interface Playlist { id: number; name: string; }
 
+const CLOCK_FORMAT_OPTIONS = [
+  { value: 'HH:MM:SS', label: 'HH:MM:SS' },
+  { value: 'HH:MM', label: 'HH:MM' },
+  { value: 'HH:MM:SS + DATE', label: 'HH:MM:SS + Date' },
+];
+
+const CLOCK_FONT_OPTIONS = [
+  { value: 'ui-sans-serif, system-ui, sans-serif', label: 'System Sans' },
+  { value: 'Arial, sans-serif', label: 'Arial' },
+  { value: 'Georgia, serif', label: 'Georgia' },
+  { value: '"Times New Roman", serif', label: 'Times New Roman' },
+  { value: '"Courier New", monospace', label: 'Courier New' },
+  { value: '"Roboto Mono", monospace', label: 'Roboto Mono' },
+  { value: 'Montserrat, sans-serif', label: 'Montserrat' },
+];
+
+const DEFAULT_CLOCK_FORMAT = 'HH:MM:SS';
+const DEFAULT_CLOCK_FONT_FAMILY = 'ui-sans-serif, system-ui, sans-serif';
+const DEFAULT_CLOCK_FONT_SIZE = 72;
+const DEFAULT_CLOCK_FONT_WEIGHT = 700;
+
+function readZoneConfig(config: unknown): Record<string, unknown> {
+  if (typeof config === 'string') {
+    try {
+      const parsed = JSON.parse(config);
+      return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {};
+    } catch {
+      return {};
+    }
+  }
+
+  return config && typeof config === 'object' ? config as Record<string, unknown> : {};
+}
+
 export default function LayoutsPage() {
   const [layouts, setLayouts] = useState<Layout[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +93,10 @@ export default function LayoutsPage() {
   const [zoneH, setZoneH] = useState(1080);
   const [zoneZ, setZoneZ] = useState(0);
   const [zonePlaylistId, setZonePlaylistId] = useState('');
+  const [zoneClockFormat, setZoneClockFormat] = useState(DEFAULT_CLOCK_FORMAT);
+  const [zoneClockFontFamily, setZoneClockFontFamily] = useState(DEFAULT_CLOCK_FONT_FAMILY);
+  const [zoneClockFontSize, setZoneClockFontSize] = useState(DEFAULT_CLOCK_FONT_SIZE);
+  const [zoneClockFontWeight, setZoneClockFontWeight] = useState(DEFAULT_CLOCK_FONT_WEIGHT);
 
   useEffect(() => { loadLayouts(); }, [page, search]);
   useEffect(() => { loadPlaylists(); }, []);
@@ -119,9 +157,19 @@ export default function LayoutsPage() {
     if (!selectedLayout) return;
     try {
       const normalizedZoneType = zoneType === 'HTML' ? 'WEB' : zoneType;
+      const config = normalizedZoneType === 'MEDIA'
+        ? (zonePlaylistId ? { playlist_id: Number(zonePlaylistId) } : {})
+        : normalizedZoneType === 'CLOCK'
+          ? {
+              format: zoneClockFormat,
+              font_family: zoneClockFontFamily,
+              font_size: zoneClockFontSize,
+              font_weight: zoneClockFontWeight,
+            }
+          : {};
       const data = {
         name: zoneName, zone_type: normalizedZoneType, x: zoneX, y: zoneY, width: zoneW, height: zoneH, z_index: zoneZ,
-        config: zoneType === 'MEDIA' && zonePlaylistId ? { playlist_id: Number(zonePlaylistId) } : {},
+        config,
       };
       if (editingZone) {
         await api.put(`/layouts/${selectedLayout.id}/zones/${editingZone.id}`, data);
@@ -156,6 +204,7 @@ export default function LayoutsPage() {
   }
 
   function openEditZone(zone: LayoutZone) {
+    const config = readZoneConfig(zone.config);
     setEditingZone(zone);
     setZoneName(zone.name);
     setZoneType(zone.zone_type === 'HTML' ? 'WEB' : zone.zone_type);
@@ -164,7 +213,11 @@ export default function LayoutsPage() {
     setZoneW(zone.width);
     setZoneH(zone.height);
     setZoneZ(zone.z_index);
-    setZonePlaylistId(zone.config?.playlist_id ? String(zone.config.playlist_id) : '');
+    setZonePlaylistId(config.playlist_id ? String(config.playlist_id) : '');
+    setZoneClockFormat(typeof config.format === 'string' ? config.format : DEFAULT_CLOCK_FORMAT);
+    setZoneClockFontFamily(typeof config.font_family === 'string' ? config.font_family : DEFAULT_CLOCK_FONT_FAMILY);
+    setZoneClockFontSize(Number(config.font_size) || DEFAULT_CLOCK_FONT_SIZE);
+    setZoneClockFontWeight(Number(config.font_weight) || DEFAULT_CLOCK_FONT_WEIGHT);
     setShowZoneModal(true);
   }
 
@@ -188,6 +241,10 @@ export default function LayoutsPage() {
     setZoneH(defaults.height);
     setZoneZ(0);
     setZonePlaylistId('');
+    setZoneClockFormat(DEFAULT_CLOCK_FORMAT);
+    setZoneClockFontFamily(DEFAULT_CLOCK_FONT_FAMILY);
+    setZoneClockFontSize(DEFAULT_CLOCK_FONT_SIZE);
+    setZoneClockFontWeight(DEFAULT_CLOCK_FONT_WEIGHT);
   }
 
   const zoneTypes = ['MEDIA', 'TEXT', 'CLOCK', 'WEATHER', 'RSS', 'WEB'];
@@ -346,7 +403,23 @@ export default function LayoutsPage() {
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Type</label>
-                <select value={zoneType} onChange={e => setZoneType(e.target.value)} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <select
+                  value={zoneType}
+                  onChange={(e) => {
+                    const nextType = e.target.value;
+                    setZoneType(nextType);
+                    if (nextType !== 'MEDIA') {
+                      setZonePlaylistId('');
+                    }
+                    if (nextType === 'CLOCK') {
+                      setZoneClockFormat(DEFAULT_CLOCK_FORMAT);
+                      setZoneClockFontFamily(DEFAULT_CLOCK_FONT_FAMILY);
+                      setZoneClockFontSize(DEFAULT_CLOCK_FONT_SIZE);
+                      setZoneClockFontWeight(DEFAULT_CLOCK_FONT_WEIGHT);
+                    }
+                  }}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
                   {zoneTypes.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
@@ -357,6 +430,70 @@ export default function LayoutsPage() {
                     <option value="">Use schedule playlist</option>
                     {playlists.map(playlist => <option key={playlist.id} value={playlist.id}>{playlist.name}</option>)}
                   </select>
+                </div>
+              )}
+
+              {zoneType === 'CLOCK' && (
+                <div className="rounded-xl border border-gray-800 bg-gray-950/60 p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium text-white">Clock Settings</h4>
+                      <p className="text-xs text-gray-500">Digit yang berubah akan dianimasikan per angka.</p>
+                    </div>
+                    <span className="text-xs text-gray-500">Preview below</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Clock Format</label>
+                      <select
+                        value={zoneClockFormat}
+                        onChange={(e) => setZoneClockFormat(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      >
+                        {CLOCK_FORMAT_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Font Family</label>
+                      <select
+                        value={zoneClockFontFamily}
+                        onChange={(e) => setZoneClockFontFamily(e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      >
+                        {CLOCK_FONT_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Font Size (px)</label>
+                      <input
+                        type="number"
+                        min="16"
+                        max="240"
+                        value={zoneClockFontSize}
+                        onChange={(e) => setZoneClockFontSize(Number(e.target.value))}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-400 mb-1">Font Weight</label>
+                      <select
+                        value={zoneClockFontWeight}
+                        onChange={(e) => setZoneClockFontWeight(Number(e.target.value))}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      >
+                        <option value={400}>Regular</option>
+                        <option value={500}>Medium</option>
+                        <option value={600}>Semi Bold</option>
+                        <option value={700}>Bold</option>
+                        <option value={800}>Extra Bold</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               )}
 

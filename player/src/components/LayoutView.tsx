@@ -8,6 +8,7 @@ import {
   resolveTransitionDurationMs,
   type TransitionEffect,
 } from './mediaTransition';
+import ClockDisplay from './clockDisplay';
 
 interface MediaItem {
   item_id: number;
@@ -219,7 +220,11 @@ export default function LayoutView({ layout }: { layout: Layout }) {
           );
         }
         if (zone.zone_type === 'CLOCK') {
-          return <div key={zone.id} className="absolute flex items-center justify-center text-white text-4xl" style={style}>{new Date().toLocaleTimeString()}</div>;
+          return (
+            <div key={zone.id} className="absolute flex items-center justify-center overflow-hidden" style={style}>
+              <ClockDisplay config={zone.config} />
+            </div>
+          );
         }
         if (zone.zone_type === 'TEXT') {
           return <div key={zone.id} className="absolute flex items-center justify-center text-white" style={style}>{String(zone.config.text || zone.name)}</div>;

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ClockDisplay from './ClockDisplay';
 
 interface MediaItem {
   item_id: number;
@@ -59,15 +60,6 @@ function MediaZone({ zone, loadMedia }: { zone: WebPlayerLayout['zones'][number]
   return <img key={item.item_id} src={source} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
 }
 
-function ClockZone() {
-  const [time, setTime] = useState(() => new Date().toLocaleTimeString());
-  useEffect(() => {
-    const interval = setInterval(() => setTime(new Date().toLocaleTimeString()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-  return <>{time}</>;
-}
-
 export default function WebPlayerLayoutView({ layout, loadMedia }: WebPlayerLayoutViewProps) {
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: layout.background_color, position: 'relative' }}>
@@ -80,7 +72,7 @@ export default function WebPlayerLayoutView({ layout, loadMedia }: WebPlayerLayo
           overflow: 'hidden',
         };
         if (zone.zone_type === 'MEDIA') return <div key={zone.id} style={style}><MediaZone zone={zone} loadMedia={loadMedia} /></div>;
-        if (zone.zone_type === 'CLOCK') return <div key={zone.id} style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 'clamp(1rem, 4vw, 4rem)' }}><ClockZone /></div>;
+        if (zone.zone_type === 'CLOCK') return <div key={zone.id} style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}><ClockDisplay config={zone.config} /></div>;
         if (zone.zone_type === 'TEXT') return <div key={zone.id} style={{ ...style, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>{String(zone.config.text || zone.name)}</div>;
         return <div key={zone.id} style={{ ...style, background: '#000' }} />;
       })}
