@@ -55,7 +55,7 @@ function MediaZone({ zone, loadMedia }: { zone: WebPlayerLayout['zones'][number]
 
   if (!item || !source) return <div style={{ width: '100%', height: '100%', background: '#000' }} />;
   const next = () => setIndex((current) => current < zone.items.length - 1 ? current + 1 : zone.loop ? 0 : current);
-  if (item.mime_type.startsWith('video/')) return <video key={item.item_id} src={source} autoPlay muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} onEnded={next} />;
+  if (item.mime_type.startsWith('video/')) return <video key={item.item_id} src={source} autoPlay muted style={{ width: '100%', height: '100%', objectFit: 'fill' }} onEnded={next} />;
   if (item.mime_type.startsWith('audio/')) return <audio key={item.item_id} src={source} autoPlay onEnded={next} />;
   return <img key={item.item_id} src={source} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
 }

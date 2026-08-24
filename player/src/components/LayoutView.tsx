@@ -57,7 +57,7 @@ function getNextIndex(currentIndex: number, total: number, loop: boolean): numbe
 
 function renderMedia(item: MediaItem, source: string, onEnded?: () => void) {
   if (item.mime_type.startsWith('video/')) {
-    return <video key={item.item_id} src={source} autoPlay muted className="w-full h-full object-cover" onEnded={onEnded} />;
+    return <video key={item.item_id} src={source} autoPlay muted className="w-full h-full" style={{ objectFit: 'fill' }} onEnded={onEnded} />;
   }
   if (item.mime_type.startsWith('audio/')) {
     return <audio key={item.item_id} src={source} autoPlay onEnded={onEnded} />;
