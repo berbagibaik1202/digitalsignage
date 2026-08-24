@@ -76,7 +76,7 @@ MINIO_SECRET_KEY=$minioSecretKey
 MINIO_BUCKET=digital-signage
 MINIO_USE_SSL=false
 # Browser-facing MinIO URL used in media previews and downloads
-MINIO_PUBLIC_URL=http://localhost:9000
+MINIO_PUBLIC_URL=https://md.display.rizki-tech.com
 
 # Workers
 WORKERS_ENABLED=true

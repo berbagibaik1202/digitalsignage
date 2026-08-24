@@ -94,6 +94,7 @@ MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
 MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
 MINIO_BUCKET=digital-signage
 MINIO_USE_SSL=false
+MINIO_PUBLIC_URL=https://md.display.rizki-tech.com
 
 # ─── Workers ────────────────────────────────────────────────
 # Set to 'true' to enable BullMQ media processing workers
